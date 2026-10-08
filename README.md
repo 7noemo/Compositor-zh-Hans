@@ -78,8 +78,24 @@ Compositor 是 SwiftUI 写的，界面上的每一句文案在渲染时都会去
 
 1. 先装好**官方 Compositor**（[下载页](https://github.com/robbietilton/Compositor/releases)）。
    如果没装，安装脚本也会问你要不要顺手下载安装。
-2. 到本仓库的 [Releases](../../releases/latest) 页，下载 **`一键安装语言包.command`**。
+2. 到本仓库的 [Releases](../../releases/latest) 页，下载 **`install-zh-Hans.command`**。
+   （它就是前面说的「一键安装语言包」，只是因为 GitHub 的限制，附件名只能用英文。）
 3. **双击它**。
+
+> **为什么附件名是英文？**
+>
+> GitHub 会**改写** Release 附件名里除 ASCII 以外的字符（官方文档原文：
+> "GitHub renames asset filenames that have special characters, non-alphanumeric
+> characters…"）。实测中文名会被换成 `default.command`，两个中文名还会撞成同一个
+> 名字直接报错。所以附件只能用英文名，中文名保留在仓库文件和压缩包内部：
+>
+> | Release 附件（英文名） | 对应中文名 |
+> | --- | --- |
+> | `install-zh-Hans.command` | 一键安装语言包.command |
+> | `restore-official.command` | 一键还原官方版.command |
+> | `Compositor-zh-Hans-langpack-v<版本>.zip` | 语言包（内含上面两个脚本 + `说明.txt`） |
+>
+> 功能完全一样，双击即可运行。
 
 > 首次双击如果提示「无法打开，因为来自身份不明的开发者」：
 > 在文件上**右键 → 打开 → 再点「打开」**。只需这一次。
@@ -98,7 +114,8 @@ bash scripts/install.sh --yes        # 不想被问就加 --yes
 
 ### 还原官方版
 
-同样在 [Releases](../../releases/latest) 页下载 **`一键还原官方版.command`**，双击。
+同样在 [Releases](../../releases/latest) 页下载 **`restore-official.command`**
+（即「一键还原官方版.command」），双击。
 
 它会按优先级尝试：
 
@@ -174,10 +191,11 @@ codesign --force --sign - --deep "$APP"
       │
       ▼
  提交语言包 → 发一个新的语言包 Release
-（附件：语言包 zip + 一键安装语言包.command + 一键还原官方版.command）
+（附件：Compositor-zh-Hans-langpack-v<版本>.zip
+       + install-zh-Hans.command + restore-official.command）
 ```
 
-所以你**只需要重新下载一次 `一键安装语言包.command` 再双击**，
+所以你**只需要重新下载一次 `install-zh-Hans.command` 再双击**，
 它会把新语言包覆盖进去（并且**不会**重复备份，原版备份始终是最初那一份）。
 
 <details>
@@ -333,7 +351,7 @@ codesign --force --sign - --deep /Applications/Compositor.app
 
 代价是**你也不会自动收到官方新版本的提示**。想升级时就手动去
 [上游 Releases](https://github.com/robbietilton/Compositor/releases) 装新版，
-再重新双击一次 `一键安装语言包.command`。
+再重新双击一次 `install-zh-Hans.command`。
 </details>
 
 <details>
@@ -417,15 +435,17 @@ Compositor-zh-Hans/
 ├── zh-Hans.lproj/
 │   └── Localizable.strings          语言包本体（唯一的核心资产，1312 条）
 ├── 一键安装语言包.command             面向使用者的双击入口（薄壳）
+│                                     └ Release 附件里叫 install-zh-Hans.command
 ├── 一键还原官方版.command             同上
+│                                     └ Release 附件里叫 restore-official.command
 ├── appcast.xml                      空 feed，用来切断 Sparkle 自动更新
 ├── scripts/
 │   ├── install.sh                   注入语言包 + 备份 + 改 Info.plist + 分层重签
 │   ├── restore.sh                   还原（备份 → 就地拆除 → 从上游重装，三级降级）
 │   ├── fetch-upstream.sh            下载上游源码 tarball（只为扫文案）
-│   ├── make-langpack.sh             打包发布用的语言包 zip
+│   ├── make-langpack.sh             打包发布用的语言包 zip（内含上面两个脚本）
 │   ├── set-repo.sh                  把 __REPO__ 占位符换成你的仓库地址
-│   ├── selfcheck.sh                 提交前一键自检（9 项）
+│   ├── selfcheck.sh                 提交前一键自检（10 项）
 │   └── tools/
 │       ├── extract_strings.py       全量扫描界面文案 + 与语言包做差集
 │       ├── analyze_coverage.py      统计「外挂能翻多少」的权威口径（A/B 类）
@@ -466,7 +486,7 @@ python3 scripts/tools/translate_missing.py
 python3 scripts/tools/merge_translations.py translations/curated.tsv translations/auto.tsv
 python3 scripts/tools/check-strings.py
 
-# 提交前跑一遍自检（9 项，含 shell 雷区与覆盖率）
+# 提交前跑一遍自检（10 项，含 shell 雷区、ASCII 附件名与覆盖率）
 bash scripts/selfcheck.sh --src _upstream
 ```
 
@@ -581,6 +601,33 @@ Compositor 内嵌 `Sparkle.framework`，而 strict 模式会对框架里的
 
 verbose 级别到 2 才有 `Authority=` 行。用 `-dv` 去 grep Authority 会永远拿不到值，
 还原脚本因此会把「已恢复原厂签名」误报成「签名主体：未知」。
+
+**⑩ GitHub 的 Release 附件名**只能**是 ASCII，中文会被悄悄改写**
+
+这是本项目 CI 卡在「发布语言包 Release」很久的真凶。GitHub 官方文档在
+[REST API → releases → assets](https://docs.github.com/en/rest/releases/assets)
+的 Notes 里写得很清楚：
+
+> GitHub **renames asset filenames** that have special characters, non-alphanumeric
+> characters, and leading or trailing periods.
+
+实测行为（用 `curl` 直传复现过）：
+
+| 上传时的名字 | GitHub 实际存下来的 |
+| --- | --- |
+| `alpha.txt` | `alpha.txt` |
+| `中文.txt` | `default.txt` ← 整段非 ASCII 变 `default` |
+| `abc中文def.txt` | `abc.def.txt` ← 非 ASCII 段变一个 `.` |
+| `一键安装语言包.command` | `default.command` |
+| `一键还原官方版.command` | 422 `ReleaseAsset.name already exists` ← 和上面撞名了 |
+
+而且它**不报错**，只在你下载到一个叫 `default.command` 的怪文件时才发现。
+更严的还有：用 multipart `filename=` 或 RFC 5987 的 `filename*=UTF-8''…`
+传中文名，会直接 `400 Invalid name for request`。
+
+所以：**Release 附件名一律用纯 ASCII**；中文名保留在仓库文件名和 zip 内部
+（zip 内部文件名不受这个限制）。`make-langpack.sh` 与 workflow 的
+「组装发布物」那一步都带了断言，dist/ 里一旦出现非 ASCII 文件名就直接失败。
 </details>
 
 ---

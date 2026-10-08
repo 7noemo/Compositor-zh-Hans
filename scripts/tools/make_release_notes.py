@@ -24,7 +24,7 @@ TEMPLATE = """Compositor 的**简体中文语言包**，对应上游 **{up_tag}*
 
 **一键安装（推荐）**
 
-下载本页 Assets 里的 `一键安装语言包.command`，双击运行。
+下载本页 Assets 里的 `install-zh-Hans.command`，双击运行。
 它会自动找到已安装的 Compositor、备份一份官方原版，然后把语言包注入进去。
 
 **手动安装**
@@ -33,9 +33,25 @@ TEMPLATE = """Compositor 的**简体中文语言包**，对应上游 **{up_tag}*
 `/Applications/Compositor.app/Contents/Resources/` 即可。
 手动方式还需要自己改 `Info.plist` 并重签名，细节见仓库 README。
 
+> ### 为什么附件名是英文？
+>
+> GitHub 会**改写** Release 附件名里除 ASCII 以外的字符 —— 官方文档
+> 原文是「GitHub renames asset filenames that have special characters,
+> non-alphanumeric characters, and leading or trailing periods」。
+> 实测中文名会被换成 `default.xxx`，两个中文名还会撞成同一个名字报错。
+> 所以附件只能用英文名，中文名放进压缩包内部（zip 内部文件名不受限制）：
+>
+> | Release 附件（英文名） | 对应中文名 |
+> | --- | --- |
+> | `install-zh-Hans.command` | 一键安装语言包.command |
+> | `restore-official.command` | 一键还原官方版.command |
+> | `{zip_name}` | 压缩包内含上面两个脚本 + `说明.txt` |
+>
+> 功能完全一样，双击即可运行。
+
 ## 想退回官方原版？
 
-下载 `一键还原官方版.command` 双击运行。它会用安装时留下的原版备份整包还原，
+下载 `restore-official.command` 双击运行。它会用安装时留下的原版备份整包还原，
 官方签名和公证票据都会回来。
 
 ## 这一版包含了什么
@@ -43,21 +59,29 @@ TEMPLATE = """Compositor 的**简体中文语言包**，对应上游 **{up_tag}*
 | 项 | 值 |
 | --- | --- |
 | 语言包词条 | {strings_total} 条 |
-| 扫描到的界面文案 | {found} 条 |
-| 已覆盖 | {covered} 条（{pct}%） |
-| 仍未覆盖 | {todo} 条 |
+| **外挂可翻译文案**（分母） | {translatable} 条 |
+| **其中已覆盖** | {translatable_covered} 条（{pct}%） |
+| 全量扫描到的字面量 | {found} 条 |
+| 全量已覆盖 | {covered} 条（{scan_pct}%） |
+| 仍需人工确认 | {todo} 条 |
 | 对应上游版本 | {up_tag} |
 | 同步时间 | {last_sync} |
+
+> 两个覆盖率的区别：**外挂可翻译文案**只统计「源码里直接写成字面量、
+> 语言包能生效」的位置，这是本项目的真实成绩；**全量**那一行分母里混着
+> `8BIM`、`TySh` 这类 PSD 二进制标记和纯数字读数，翻不了，仅供参考。
 
 ## 已知限制（请务必看一眼）
 
 这是**外挂语言包**：不修改 app 的可执行文件，只往里面放一份
 `Localizable.strings`，靠 SwiftUI 自己的本地化查表生效。因此：
 
-* **能翻译的**：源码里直接写成 `Text("Add Layer")` 这类字面量的文案，共扫描到 453 个。
+* **能翻译的**：源码里直接写成 `Text("Add Layer")` 这类字面量的文案，
+  共扫描到 {translatable} 个，当前覆盖 {translatable_covered} 个。
 * **翻不了的**：源码里先赋给 `String` 变量、再传给视图的文案（如 `Text(title)`）。
   SwiftUI 对这类值按原样渲染、**不查表**，只有改源码重新编译才能翻译。
-  全量扫描到 264 处，其中真正是用户可见文案的约一百处，
+  全量扫描到 {untranslatable_sites} 处（{untranslatable_exprs} 种写法），
+  其中真正是用户可见文案的约一百处，
   集中在部分工具面板的分组标题、鼠标悬停提示等位置。
   这不是语言包漏了，是外挂方案的能力边界。
 * 命令面板（⇧⌘P）的**搜索**仍按英文原文匹配：界面显示中文，但要搜某个工具得输入英文。
@@ -106,13 +130,19 @@ def main():
         up_version=g(up, "latest_version"),
         version=version,
         repo=args.repo,
-        zip_name=args.zip_name or f"Compositor-zh-Hans-语言包-v{version}.zip",
+        zip_name=args.zip_name or f"Compositor-zh-Hans-langpack-v{version}.zip",
         strings_total=g(loc, "strings_total"),
-        found=g(loc, "extracted_ui_strings"),
-        covered=g(loc, "covered"),
+        found=g(loc, "scan_found"),
+        covered=g(loc, "scan_covered"),
+        scan_pct=g(loc, "scan_coverage_percent"),
         pct=g(loc, "coverage_percent"),
-        todo=g(loc, "todo"),
+        todo=g(loc, "scan_todo"),
         last_sync=g(loc, "last_sync"),
+        # 外挂方案的「能翻 / 翻不了」两口径，README 里的数字与这里同源
+        translatable=g(loc, "translatable_strings"),
+        translatable_covered=g(loc, "translatable_covered"),
+        untranslatable_sites=g(loc, "untranslatable_sites"),
+        untranslatable_exprs=g(loc, "untranslatable_expressions"),
     ))
     return 0
 

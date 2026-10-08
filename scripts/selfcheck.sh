@@ -7,12 +7,16 @@
 #   bash scripts/selfcheck.sh --min-coverage 80
 #
 # 检查项：
-#   1. 所有 Python 工具语法正常
-#   2. shell 雷区 lint（$VAR 后跟中文、set -e 下的失败命令替换 等）
-#   3. 语言包通过 check-strings.py（格式、重复键、占位符一致性）
-#   4. 安装 / 还原脚本的关键逻辑自检（占位符哨兵完好、参数守卫生效）
-#   5. 打包脚本能真的产出 zip，且 zip 里有语言包
-#   6. （可选）拿上游源码算一遍覆盖率，低于阈值就失败
+#    1. 所有 Python 工具语法正常
+#    2. shell 雷区 lint（$VAR 后跟中文、set -e 下的失败命令替换 等）
+#    3. 所有 shell 脚本语法正常（bash -n）
+#    4. 语言包通过 check-strings.py（格式、重复键、占位符一致性）
+#    5. 安装 / 还原脚本的关键逻辑（哨兵完好、参数守卫）—— 全静态，无副作用
+#    6. 打包脚本能真的产出 zip、含语言包、非 ASCII 名带 UTF-8 标志位、包名纯 ASCII
+#    7. Release 说明能生成
+#    8. workflow YAML 能解析
+#    9. Release 附件名必须是纯 ASCII（GitHub 会改写非 ASCII 附件名）
+#   10. （可选 --src）拿上游源码算一遍覆盖率，低于阈值就失败
 #
 set -euo pipefail
 
@@ -31,7 +35,7 @@ while [ $# -gt 0 ]; do
            SRC_ARG="$2"; shift 2 ;;
     --min-coverage) [ $# -ge 2 ] || { echo "--min-coverage 后面要跟数字" >&2; exit 2; }
            MIN_COVERAGE="$2"; shift 2 ;;
-    -h|--help) sed -n '2,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "未知参数：${1}" >&2; exit 2 ;;
   esac
 done
@@ -181,14 +185,45 @@ fi
 # ---------------------------------------------------------------- 6. 打包
 head1 "6. 打包语言包"
 if bash scripts/make-langpack.sh "0.0.0-selfcheck" "$WORK/dist" > "$WORK/pack.out" 2>&1; then
-  ZIP="$WORK/dist/Compositor-zh-Hans-语言包-v0.0.0-selfcheck.zip"
+  ZIP="$WORK/dist/Compositor-zh-Hans-langpack-v0.0.0-selfcheck.zip"
   if [ -f "$ZIP" ]; then
     if unzip -l "$ZIP" 2>/dev/null | grep -q 'zh-Hans.lproj/Localizable.strings'; then
       ok "zip 产出正常，且包含 zh-Hans.lproj/Localizable.strings"
     else
       bad "zip 里没有语言包"
     fi
-    # 6.2 非 ASCII 文件名必须带 UTF-8 标志位（general purpose bit 11）。
+    # 6.2 压缩包名必须是**纯 ASCII**。
+    #     它要当 GitHub Release 的附件名，而 GitHub 会「重命名带特殊字符、
+    #     非 ASCII 字符的附件名」（官方文档 REST API → releases → assets 的
+    #     Notes 一节）。曾经包名叫「Compositor-zh-Hans-语言包-v1.4.6.zip」，
+    #     发上去被悄悄改成「Compositor-zh-Hans-.-v1.4.6.zip」；两个中文名的
+    #     一键脚本更惨，双双被改成 default.command 撞名报 422，CI 卡了很久。
+    BAD_ZIPNAME="$(LC_ALL=C ls "$WORK/dist" | LC_ALL=C grep '[^ -~]' || true)"
+    if [ -n "$BAD_ZIPNAME" ]; then
+      bad "产物里有非 ASCII 文件名（Release 附件名只接受 ASCII）："
+      printf '%s\n' "$BAD_ZIPNAME" | sed 's/^/     /'
+    else
+      ok "压缩包名是纯 ASCII"
+    fi
+    # 6.3 zip 里要带着两个一键脚本 —— 只下 zip 的用户也能拿到完整一套。
+    #     注意 zip **内部**文件名不受附件名限制，所以这里保留中文名。
+    #     这里必须用 Python 读 zip，不能用 unzip -l：macOS 自带的 Info-ZIP
+    #     打印非 ASCII 文件名时会走样（跟打包脚本踩的是同一个坑），
+    #     grep 中文名会静默匹配不上，白白误报。
+    MISSING="$("$PY" - "$ZIP" <<'PYM' || true
+import sys, zipfile
+need = ["一键安装语言包.command", "一键还原官方版.command", "说明.txt"]
+with zipfile.ZipFile(sys.argv[1]) as z:
+    have = {i.filename for i in z.infolist()}
+print(" ".join(n for n in need if n not in have))
+PYM
+)"
+    if [ -n "$MISSING" ]; then
+      bad "zip 里缺少：${MISSING}"
+    else
+      ok "zip 内含两个一键脚本与说明.txt"
+    fi
+    # 6.4 非 ASCII 文件名必须带 UTF-8 标志位（general purpose bit 11）。
     #     曾经用 /usr/bin/zip 打包，它写原始 UTF-8 字节却不置这个标志位，
     #     结果 Windows 资源管理器把「说明.txt」显示成「Φ»┤µÿÄ.txt」。
     #     这条守卫就是为了让那个坑不能再回来。
@@ -220,10 +255,13 @@ fi
 head1 "7. Release 说明生成"
 if "$PY" scripts/tools/make_release_notes.py --repo selfcheck/local --version 0.0.0 \
      > "$WORK/notes.md" 2>"$WORK/notes.err"; then
-  if grep -q '一键安装语言包.command' "$WORK/notes.md"; then
+  # 说明里必须给出「Release 附件名 → 中文名」的对照，否则用户下载到
+  # install-zh-Hans.command 会一脸茫然。
+  if grep -q 'install-zh-Hans.command' "$WORK/notes.md" && \
+     grep -q 'restore-official.command' "$WORK/notes.md"; then
     ok "说明文件生成正常（$(wc -l < "$WORK/notes.md" | tr -d ' ') 行）"
   else
-    bad "说明文件内容不完整"
+    bad "说明文件里没写清 Release 附件名的中文对照"
   fi
 else
   bad "make_release_notes.py 失败："
@@ -251,8 +289,51 @@ else
   warn "本机没有 PyYAML，跳过（CI 上会有）"
 fi
 
-# ---------------------------------------------------------------- 9. 覆盖率
-head1 "9. 覆盖率（外挂方案口径）"
+# ------------------------------------------------ 9. Release 附件名（纯 ASCII）
+head1 "9. Release 附件名"
+# GitHub 会「重命名带特殊字符、非 ASCII 字符的附件名」（官方文档 REST API →
+# releases → assets 的 Notes 一节），而且**不报错** —— 直到用户下载到一个叫
+# default.command 的怪文件才发现。两个中文名还会被改写成同一个名字，
+# 报 422 ReleaseAsset.name already exists 把整个发布步骤拖红。
+# 这里把 workflow 里真正会变成附件的文件名抽出来，逐个断言是纯 ASCII。
+WF=".github/workflows/sync-upstream.yml"
+if [ -f "$WF" ]; then
+  # 9.1 「组装发布物」那步 cp 进 dist/ 的名字
+  ASSET_NAMES="$(grep -oE '"dist/[^"]*"' "$WF" | tr -d '"' | sed 's|^dist/||' | sort -u || true)"
+  if [ -z "$ASSET_NAMES" ]; then
+    warn "没在 ${WF} 里找到写入 dist/ 的文件名，本项检查可能失效"
+  else
+    BAD_A="$(printf '%s\n' "$ASSET_NAMES" | LC_ALL=C grep '[^ -~]' || true)"
+    if [ -n "$BAD_A" ]; then
+      bad "${WF} 里用作 Release 附件的名字含非 ASCII（GitHub 一定会改写）："
+      printf '%s\n' "$BAD_A" | sed 's/^/     /'
+    else
+      ok "dist/ 附件名均为纯 ASCII：$(printf '%s' "$ASSET_NAMES" | tr '\n' ' ')"
+    fi
+  fi
+  # 9.2 压缩包名（真正的字符来自 make-langpack.sh，第 6 项已单独把关）
+  ZIP_DECL="$(grep -m1 -E '^[[:space:]]*ZIP=' "$WF" | sed 's/^[[:space:]]*ZIP=//' | tr -d '"' || true)"
+  if [ -n "$ZIP_DECL" ]; then
+    if printf '%s' "$ZIP_DECL" | LC_ALL=C grep -q '[^ -~]'; then
+      bad "workflow 里的压缩包名含非 ASCII：${ZIP_DECL}"
+    else
+      ok "workflow 的压缩包名是纯 ASCII：${ZIP_DECL}"
+    fi
+  else
+    warn "没找到 ZIP= 声明，跳过"
+  fi
+  # 9.3 上传之后必须有反查 —— GitHub 悄悄改名时，没有反查就完全发现不了
+  if grep -q '核对附件名' "$WF"; then
+    ok "workflow 有「附件名核对」步骤"
+  else
+    bad "workflow 缺少附件名核对：GitHub 改写附件名不报错，必须有反查"
+  fi
+else
+  warn "找不到 ${WF}，跳过"
+fi
+
+# ---------------------------------------------------------------- 10. 覆盖率
+head1 "10. 覆盖率（外挂方案口径）"
 if [ -n "$SRC_ARG" ]; then
   if [ -d "$SRC_ARG" ]; then
     if "$PY" scripts/tools/analyze_coverage.py "$SRC_ARG" \

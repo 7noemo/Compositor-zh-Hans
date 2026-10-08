@@ -5,9 +5,19 @@
 #   bash scripts/make-langpack.sh <版本号> [输出目录]
 #
 # 产出（在输出目录里）：
-#   Compositor-zh-Hans-语言包-v<版本>.zip
-#       └── zh-Hans.lproj/Localizable.strings   真正要注入的文件夹
-#       └── 说明.txt                            手动安装与还原的说明
+#   Compositor-zh-Hans-langpack-v<版本>.zip
+#       ├── zh-Hans.lproj/Localizable.strings   真正要注入的文件夹
+#       ├── 说明.txt                            手动安装与还原的说明
+#       ├── 一键安装语言包.command               一键安装（薄壳）
+#       └── 一键还原官方版.command               一键还原（薄壳）
+#
+# 压缩包名刻意用**纯 ASCII**：它要当 GitHub Release 的附件名，
+# 而 GitHub 会重命名含非 ASCII 字符的附件名（官方文档 REST API →
+# releases → assets 的 Notes 一节写明：「GitHub renames asset filenames
+# that have special characters, non-alphanumeric characters…」）。
+# 实测：?name=中文名 会被静默改写成 default.xxx，两个中文名还会撞成
+# 同一个名字报 422 already_exists —— 这就是 CI 发 Release 失败的原因。
+# 注意 zip **内部**的文件名不受这个限制，所以下面就照旧用中文。
 #
 # 单独抽成脚本而不是写在 workflow 的 run: 里：
 #   YAML 的块标量 + heredoc 的缩进很容易咬人，而且本地没法单独验证。
@@ -29,7 +39,7 @@ SRC_PACK="zh-Hans.lproj/Localizable.strings"
 [ -s "$SRC_PACK" ] || { echo "❗ 找不到语言包：${SRC_PACK}" >&2; exit 1; }
 
 CNT="$(grep -c '^"' "$SRC_PACK" || true)"
-ZIPNAME="Compositor-zh-Hans-语言包-v${VERSION}.zip"
+ZIPNAME="Compositor-zh-Hans-langpack-v${VERSION}.zip"
 
 STAGE="$(mktemp -d "${TMPDIR:-/tmp}/compositor-pack.XXXXXX")"
 cleanup() { rm -rf "$STAGE"; }
@@ -37,6 +47,18 @@ trap cleanup EXIT
 
 mkdir -p "$STAGE/zh-Hans.lproj"
 cp "$SRC_PACK" "$STAGE/zh-Hans.lproj/Localizable.strings"
+
+# 顺手把两个一键脚本也塞进压缩包：只想下 zip 的用户照样能拿到完整一套。
+# Release 附件名只能是 ASCII，但 zip 内部文件名没有这个限制，
+# 所以这里保留中文名，用户解压出来的就是「一键安装语言包.command」。
+for f in "一键安装语言包.command" "一键还原官方版.command"; do
+  if [ -f "$f" ]; then
+    cp "$f" "$STAGE/$f"
+    chmod +x "$STAGE/$f"
+  else
+    echo "⚠️ 找不到 ${f}，压缩包里将不含它" >&2
+  fi
+done
 
 cat > "$STAGE/说明.txt" <<'TXT'
 Compositor 简体中文语言包
@@ -71,12 +93,22 @@ Compositor 简体中文语言包
 
 更省事的做法
 ------------
-直接下载仓库 Release 里的「一键安装语言包.command」，双击运行，
-上面这些步骤它都会做，并且会先帮你备份一份官方原版。
+这个压缩包里就带着两个脚本，解压后直接双击：
+
+    一键安装语言包.command     安装（会先帮你备份一份官方原版）
+
+也可以只去仓库 Release 页单独下载。注意 GitHub 的 Release 附件名
+只接受 ASCII —— 它会「重命名带特殊字符、非 ASCII 字符的附件名」
+（官方文档原文如此）—— 所以 Release 页上这两个文件叫：
+
+    install-zh-Hans.command    就是「一键安装语言包.command」
+    restore-official.command   就是「一键还原官方版.command」
+
+功能完全一样，双击即可运行。
 
 还原
 ----
-同样在 Release 里下载「一键还原官方版.command」双击运行。
+双击「一键还原官方版.command」（Release 页里叫 restore-official.command）。
 
 注意
 ----
