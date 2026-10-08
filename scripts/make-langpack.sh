@@ -147,8 +147,17 @@ with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         dirnames.sort()
         rel = os.path.relpath(dirpath, stage)
         if rel != ".":
-            # 显式补一条目录项，有些老解压工具依赖它来建文件夹
-            z.writestr(zipfile.ZipInfo(rel.replace(os.sep, "/") + "/"), b"")
+            # 显式补一条目录项，有些老解压工具依赖它来建文件夹。
+            #
+            # 必须自己设 external_attr：ZipInfo 的默认值是 0o600，
+            # 而目录少了 x 位就**进不去** —— macOS 自带 unzip 解出来是
+            #     drw-------
+            # 用户双击进不了 zh-Hans.lproj，手动安装那一步直接卡死。
+            # 0o40755 = 目录 + rwxr-xr-x；低 16 位的 0x10 是 MS-DOS 的
+            # 目录标志，Windows 资源管理器靠它认目录。
+            info = zipfile.ZipInfo(rel.replace(os.sep, "/") + "/")
+            info.external_attr = (0o40755 << 16) | 0x10
+            z.writestr(info, b"")
         for name in sorted(filenames):
             full = os.path.join(dirpath, name)
             arc = name if rel == "." else os.path.join(rel, name)

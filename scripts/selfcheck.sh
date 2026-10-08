@@ -243,6 +243,26 @@ PYZ
     else
       ok "zip 内非 ASCII 文件名均带 UTF-8 标志位"
     fi
+    # 6.5 zip 内的权限位：目录必须有 x（否则解压后进不去 zh-Hans.lproj），
+    #     一键脚本必须有 x（否则双击跑不起来）。
+    #     ZipInfo 的 external_attr 默认是 0o600 —— 第一版就是这么发的包，
+    #     macOS 自带 unzip 解出来是 drw-------，手动安装那步直接卡死。
+    "$PY" - "$ZIP" > "$WORK/zipperm.out" 2>&1 <<'PYM' || true
+import sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as z:
+    for i in z.infolist():
+        mode = i.external_attr >> 16
+        if i.is_dir() and not (mode & 0o100):
+            print("PERM:目录缺 x 位（解压后进不去）  %s  模式=%s" % (i.filename, oct(mode)))
+        elif i.filename.endswith(".command") and not (mode & 0o100):
+            print("PERM:脚本缺执行位（双击跑不起来）  %s  模式=%s" % (i.filename, oct(mode)))
+PYM
+    if grep -q '^PERM:' "$WORK/zipperm.out"; then
+      bad "zip 内权限有问题："
+      sed -n 's/^PERM://p' "$WORK/zipperm.out" | sed 's/^/     /'
+    else
+      ok "zip 内目录可进入、一键脚本可执行"
+    fi
   else
     bad "没找到产出的 zip"
   fi
