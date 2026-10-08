@@ -54,14 +54,20 @@ if [ -n "$FROM_LOCAL" ]; then
   cp -R "$FROM_LOCAL" "$DEST"
   # 兼容两种布局：直接是 Compositor/ 或外面还包一层
   if [ ! -d "$DEST/Compositor" ] && [ -d "$DEST"/*/Compositor ]; then
-    inner="$(ls -d "$DEST"/*/Compositor | head -n 1)"
+    # 刻意不用 `ls -d ... | head -n 1`：head 拿够一行就把管道关掉，
+    # 上游若返回很多行，ls 会收到 SIGPIPE（退出码 141），
+    # pipefail 下这个非零状态会顺着命令替换冒到 set -e，脚本静默终止。
+    # 用 glob + 首个匹配，行为一样但不经过外部命令和管道。
+    inner=""
+    for cand in "$DEST"/*/Compositor; do inner="$cand"; break; done
+    [ -n "$inner" ] || die "检测到嵌套目录，却没取到 Compositor/ 所在层。"
     say "    （检测到嵌套目录，取 ${inner} 所在层作为根）"
     tmp="$(dirname "$inner")"
     mv "$tmp" "$DEST.__tmp"
     rm -rf "$DEST"
     mv "$DEST.__tmp" "$DEST"
   fi
-  N="$(find "$DEST" -name '*.swift' | wc -l | tr -d ' ')"
+  N="$(find "$DEST" -name '*.swift' | wc -l | tr -d ' ' || true)"
   say "    ✅ 就位：${DEST}（${N} 个 Swift 文件）"
   exit 0
 fi
@@ -99,7 +105,7 @@ rm -rf "$DEST"
 mkdir -p "$(dirname "$DEST")"
 mv "$SRC_TOP" "$DEST"
 
-N="$(find "$DEST" -name '*.swift' | wc -l | tr -d ' ')"
+N="$(find "$DEST" -name '*.swift' | wc -l | tr -d ' ' || true)"
 say "    ✅ 就位：${DEST}"
 say "       版本 ${VERSION}，${N} 个 Swift 文件"
 say ""

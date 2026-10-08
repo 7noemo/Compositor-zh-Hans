@@ -260,28 +260,115 @@ jobs:
       # ------------------------------------------------------------ 9. 发 Release
       # 只发语言包，不编译、不出 DMG。
       # tag 用 lang-v<上游版本>，与上游的 v<版本> 区分开，避免撞车。
+      #
+      # 这一步刻意**不开 set -e**：gh 失败时得先把它的原始报错完整打出来，
+      # 再决定退不退。之前直接 set -e，gh 的 stderr 被吞掉，日志里只剩一句
+      # "Process completed with exit code 1"，完全看不出是权限、tag 冲突
+      # 还是别的什么。
       - name: 发布语言包 Release
         if: steps.upstream.outputs.needs_sync == 'true' || inputs.force
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
           VERSION: ${{ steps.upstream.outputs.version }}
           UP_TAG: ${{ steps.upstream.outputs.tag }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
+
           TAG="lang-v${VERSION}"
           TITLE="简体中文语言包 v${VERSION}"
 
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "==> Release $TAG 已存在，更新说明与附件"
-            gh release edit "$TAG" --title "$TITLE" --notes-file dist/RELEASE_NOTES.md
-            gh release upload "$TAG" dist/*.zip dist/*.command --clobber
+          echo "==> 环境自检"
+          echo "    gh   : $(gh --version 2>&1 | head -n 1)"
+          echo "    repo : $REPO"
+          echo "    tag  : ${TAG}（对应上游 ${UP_TAG}）"
+
+          # token 到底能不能写？用一次轻量 API 调用问出来。
+          # 这样万一真是权限问题，日志里会直接看到 push=false，
+          # 而不是一句语焉不详的 "Resource not accessible by integration"。
+          if PERM="$(gh api "repos/$REPO" --jq '.permissions' 2>&1)"; then
+            echo "    token 权限: $PERM"
           else
-            echo "==> 创建 Release $TAG"
-            gh release create "$TAG" \
-              --title "$TITLE" \
-              --notes-file dist/RELEASE_NOTES.md \
-              --latest \
-              dist/*.zip dist/*.command
+            echo "    ⚠️ 取权限信息失败：$PERM"
+          fi
+
+          echo "==> 附件检查"
+          ASSETS=()
+          for f in dist/*.zip dist/*.command; do
+            if [ -e "$f" ]; then
+              printf '    %-46s %8s B\n' "$f" "$(wc -c <"$f" | tr -d ' ')"
+              ASSETS+=("$f")
+            else
+              echo "    ❌ 缺附件：$f"
+            fi
+          done
+          if [ "${#ASSETS[@]}" -eq 0 ]; then
+            echo "❗ dist/ 里一个附件都没有，请先看「组装发布物」那一步的日志。"
+            exit 1
+          fi
+
+          echo "==> 创建 / 更新 Release"
+          # 统一用 if OUT="$(cmd 2>&1)"; then RC=0; else RC=$?; fi 的写法：
+          # 既能留住 gh 的原始输出，又能拿到真实退出码。
+          # 直接写 `cmd || RC=$?` 会把输出漏到 stdout 而不受控，
+          # 直接 set -e 又会把报错吞掉。
+          RC=0
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "    Release $TAG 已存在，更新标题、说明与附件"
+            if OUT="$(gh release edit "$TAG" --title "$TITLE" \
+                        --notes-file dist/RELEASE_NOTES.md 2>&1)"; then
+              RC=0
+            else
+              RC=$?
+            fi
+            echo "$OUT"
+            if [ "$RC" -eq 0 ]; then
+              # --clobber：附件重名时直接覆盖，否则会 422
+              if OUT="$(gh release upload "$TAG" "${ASSETS[@]}" --clobber 2>&1)"; then
+                RC=0
+              else
+                RC=$?
+              fi
+              echo "$OUT"
+            fi
+          else
+            echo "    Release $TAG 不存在，新建"
+            if OUT="$(gh release create "$TAG" --title "$TITLE" \
+                        --notes-file dist/RELEASE_NOTES.md \
+                        --latest "${ASSETS[@]}" 2>&1)"; then
+              RC=0
+            else
+              RC=$?
+            fi
+            echo "$OUT"
+
+            # --latest 只是给仓库侧栏挂个「最新」标记，不是必需品。
+            # 万一它挑剔（比如仓库里还没有任何 Release 时的边界行为），
+            # 去掉它再试一次，别为了一个展示性标记把整条流水线拖红。
+            if [ "$RC" -ne 0 ]; then
+              echo "    ⚠️ 带 --latest 的创建失败（退出码 ${RC}），去掉 --latest 重试…"
+              if OUT="$(gh release create "$TAG" --title "$TITLE" \
+                          --notes-file dist/RELEASE_NOTES.md \
+                          "${ASSETS[@]}" 2>&1)"; then
+                RC=0
+              else
+                RC=$?
+              fi
+              echo "$OUT"
+            fi
+          fi
+
+          if [ "$RC" -ne 0 ]; then
+            echo ""
+            echo "❗ 发布失败（退出码 ${RC}）。上面那行才是 gh 的原始报错。"
+            echo "   常见原因："
+            echo "     1) 仓库 Settings → Actions → General → Workflow permissions"
+            echo "        还停在 Read-only。改成「Read and write」后重跑本 workflow。"
+            echo "        （注意：若真是这个原因，前面「有变化就提交」那一步的 git push"
+            echo "          也会失败 —— 它成功了就说明权限没问题。）"
+            echo "     2) 已存在同名 tag/release 但指向别处：删掉后重跑。"
+            echo "     3) 附件名/路径有问题：看上面「附件检查」有没有 ❌。"
+            exit "$RC"
           fi
 
           echo "--- 现在的 Release ---"

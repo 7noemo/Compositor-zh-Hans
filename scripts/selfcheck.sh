@@ -70,11 +70,20 @@ done
 head1 "2. shell 雷区 lint"
 if [ -f scripts/tools/lint-shell.py ]; then
   if "$PY" scripts/tools/lint-shell.py . > "$WORK/lint.out" 2>&1; then
-    ok "未发现雷区"
+    ok "没有 A 类雷区"
   else
     # lint 对「注释里的反例」不误报，所以这里报出来的都是真的要改
-    bad "发现 $(grep -c '^' "$WORK/lint.out" || true) 行问题："
-    sed 's/^/     /' "$WORK/lint.out"
+    bad "发现 A 类雷区（会在 macOS bash 3.2 上崩）："
+  fi
+  # B 类只告警、不影响退出码，但**必须打出来**：
+  # 之前这里只在失败分支打印 lint.out，于是没有 A 类错误时
+  # B 类警告被整份丢进临时目录，等于白查。
+  if grep -q '⚠️' "$WORK/lint.out" 2>/dev/null; then
+    printf '  \033[33m⚠️\033[0m B 类提示（pipefail 下可能静默终止，建议加 || true）：\n'
+    grep '⚠️' "$WORK/lint.out" | sed 's/^/     /'
+  fi
+  if [ -s "$WORK/lint.out" ] && grep -q '❌' "$WORK/lint.out"; then
+    grep -A1 '❌' "$WORK/lint.out" | sed 's/^/     /'
   fi
 else
   warn "缺少 scripts/tools/lint-shell.py，跳过"
