@@ -360,7 +360,11 @@ if [ "$AUTO" = "false" ]; then
 else
   warn "    ⚠️ SUEnableAutomaticChecks = ${AUTO}（预期 false，汉化可能被覆盖）"
 fi
-if codesign --verify --strict "$APP_PATH" >/dev/null 2>&1; then
+# 注意刻意不用 --verify --strict：Compositor 内嵌 Sparkle.framework，
+# 而 strict 模式会对框架里的 Versions/Current 符号链接结构吹毛求疵 ——
+# 连官方 Developer ID 签名 + 已公证的原版都过不了。用普通 --verify 即可，
+# 它验证的正是我们关心的那件事：签名与 bundle 内容是否匹配。
+if codesign --verify "$APP_PATH" >/dev/null 2>&1; then
   say "    ✅ 签名可校验"
 else
   warn "    ⚠️ 签名校验未通过；若打不开，请先运行还原脚本再重试"

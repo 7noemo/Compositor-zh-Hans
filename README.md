@@ -569,6 +569,18 @@ YAML 会把它当别名解析并报错。复杂的多行逻辑一律抽成独立
 早期版本的 `selfcheck.sh` 会真的调用 `install.sh` 来验证参数守卫 ——
 结果它把用户 `/Applications` 里的 app 重新注入并重签了一遍。
 现在所有会改动真实安装的检查都改成静态检查，或者用不存在的路径确保提前退出。
+
+**⑧ `codesign --verify --strict` 对带 Sparkle 的 app 会误报**
+
+Compositor 内嵌 `Sparkle.framework`，而 strict 模式会对框架里的
+`Versions/Current` 符号链接结构吹毛求疵 —— 连官方已公证的原版都过不了。
+用普通的 `codesign --verify` 即可，它验证的正是我们关心的那件事：
+签名与 bundle 内容是否匹配。
+
+**⑨ `codesign -dv` 不输出签名主体，要 `-dvv`**
+
+verbose 级别到 2 才有 `Authority=` 行。用 `-dv` 去 grep Authority 会永远拿不到值，
+还原脚本因此会把「已恢复原厂签名」误报成「签名主体：未知」。
 </details>
 
 ---

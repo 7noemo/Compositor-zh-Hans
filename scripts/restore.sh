@@ -279,13 +279,16 @@ if [ "$DEVR" = "en" ]; then
 else
   warn "    ⚠️ 开发地区 = ${DEVR}（预期 en，手动装过其他语言包吗？）"
 fi
-AUTH="$(codesign -dv "$APP_PATH" 2>&1 | sed -n 's/^Authority=//p' | head -n 1 || true)"
+# 注意是 -dvv 而不是 -dv：verbose 只有到 2 才会打印 Authority 行，
+# 用 -dv 的话永远读不到签名主体，会误报成「未知」。
+AUTH="$(codesign -dvv "$APP_PATH" 2>&1 | sed -n 's/^Authority=//p' | head -n 1 || true)"
 if [ -n "$AUTH" ]; then
   say "    ✅ 签名主体：${AUTH}"
 else
   say "    ℹ️ 签名主体：未知（ad-hoc 签名没有 Authority，属正常）"
 fi
-if codesign --verify --strict "$APP_PATH" >/dev/null 2>&1; then
+# 不用 --strict：见 install.sh 里的说明（Sparkle.framework 的符号链接会被挑剔）
+if codesign --verify "$APP_PATH" >/dev/null 2>&1; then
   say "    ✅ 签名可校验"
 else
   warn "    ⚠️ 签名校验未通过；首次打开可能需要「右键 → 打开」"; OK=0
