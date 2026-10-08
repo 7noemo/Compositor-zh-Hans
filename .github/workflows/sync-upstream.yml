@@ -25,8 +25,8 @@ on:
         default: ""
 
 permissions:
+  # 只需要写仓库内容（提交语言包 / state）。接力出包靠 workflow_run，不需要 actions: write。
   contents: write
-  actions: write
 
 concurrency:
   group: sync-upstream
@@ -238,19 +238,12 @@ jobs:
             -m "详见 state/upstream.json 与 state/pending/。" || echo "没有可提交内容。"
           git push
 
-      # ------------------------------------------------------------ 7. 触发出包
-      - name: 触发编译打包
-        if: steps.diff.outputs.changed == 'true' || steps.upstream.outputs.needs_sync == 'true' || inputs.force
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.upstream.outputs.tag }}
-        run: |
-          set -euo pipefail
-          echo "通知 build-release 开始出包：$TAG"
-          gh workflow run build-release.yml \
-            --ref "${GITHUB_REF_NAME}" \
-            -f tag="$TAG" \
-            || echo "⚠️ 触发失败（可能是 token 权限不足），请手动运行 build-release。"
+      # 这里刻意不再调用 `gh workflow run build-release.yml`。
+      # build-release.yml 自己声明的 workflow_run 触发器会在本 workflow 跑完时
+      # 自动接力，两种方式同时用会让每次发版跑两遍 macOS 编译
+      # （concurrency 只保证串行，不保证去重）。
+      # 另外 workflow_run 那边带了 conclusion == 'success' 的判断，
+      # 同步失败时不会拿一份没更新过的 state 去出包。
 
       - name: 汇总
         if: always()

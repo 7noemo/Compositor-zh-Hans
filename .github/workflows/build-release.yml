@@ -3,9 +3,14 @@ name: Build & release macOS app
 # 把打过本地化补丁的上游源码编译成「完整汉化版」DMG，发到本仓库的 Releases。
 #
 # 触发方式
-#   * Sync upstream translations 跑完之后自动调用（最常用）
+#   * Sync upstream translations 跑完之后自动接力（最常用）
 #   * 手动 workflow_dispatch
 #   * 推送形如 v1.4.6-zh 的 tag
+#
+# 为什么不会自己触发自己：
+#   本 workflow 最后用 `gh release create v<版本>-zh` 建 Release，这会顺带建出同名 tag。
+#   GitHub 的既有规则是「由 GITHUB_TOKEN 产生的事件不会再起新的 workflow run」，
+#   所以那个 tag 不会把 `on: push: tags` 这条再点一遍。（手动 push tag 才会。）
 #
 # 为什么不用 Developer ID 签名
 #   Developer ID 证书 & Apple 公证都要付费账号，这里用 ad-hoc 签名。
@@ -40,6 +45,13 @@ concurrency:
 
 jobs:
   build:
+    # workflow_run 默认「不管上游 workflow 成功还是失败都会触发」。
+    # 同步失败时 state/upstream.json 没被更新，拿它出包只会产出错误的版本号，
+    # 所以在这一层显式挡掉。手动 dispatch / 推 tag 不受影响。
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+
     # 上游要求 macOS 26 SDK，对应 Xcode 26；GitHub 的 macos-26 runner 已带
     runs-on: macos-26
     timeout-minutes: 60
