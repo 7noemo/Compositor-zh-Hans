@@ -15,8 +15,13 @@
 import json
 import os
 import re
-import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# 复用「插值 -> 格式串」的骨架匹配逻辑，避免把 Close \(tab.title) 这种
+# 明明已经译好的文案误报成待翻译（它在语言包里存的是 Close %@）。
+from analyze_coverage import key_variants, skeleton_of_key  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DEFAULT_PACK = os.path.join(ROOT, "zh-Hans.lproj", "Localizable.strings")
@@ -64,8 +69,39 @@ ENTRY = re.compile(
 
 
 def strip_comments(text):
+    """去掉注释，但要小心别把字符串里的 // 当成注释。
+
+    之前用 line.split("//", 1) 一刀切，会把
+        let u = "https://example.com/x"
+    变成
+        let u = "https:
+    —— 引号从此不配平，后面所有行扫出来的字面量都是错的。
+    """
     text = re.sub(r'/\*.*?\*/', ' ', text, flags=re.S)
-    return "\n".join(l.split("//", 1)[0] for l in text.split("\n"))
+    out = []
+    for line in text.split("\n"):
+        i = 0
+        n = len(line)
+        cut = n
+        while i < n:
+            c = line[i]
+            if c == '"':
+                i += 1
+                while i < n:
+                    if line[i] == "\\":
+                        i += 2
+                        continue
+                    if line[i] == '"':
+                        break
+                    i += 1
+                i += 1
+                continue
+            if c == "/" and i + 1 < n and line[i + 1] == "/":
+                cut = i
+                break
+            i += 1
+        out.append(line[:cut])
+    return "\n".join(out)
 
 
 def is_noise(s):
@@ -108,6 +144,22 @@ def main():
 
     pack = load_pack(pack_path)
     keys = set(pack)
+    # 骨架索引：把语言包 key 里的占位符统一成标记，
+    # 这样 「Close %@」 与源码里的 「Close \(tab.title)」 能对上。
+    pack_skel = {}
+    for k in keys:
+        sk, _ = skeleton_of_key(k)
+        pack_skel.setdefault(sk, []).append(k)
+
+    def covered_by(lit):
+        """返回命中的语言包 key（可能是插值对应的格式串），没命中返回 None。"""
+        for v in key_variants(lit):
+            if v in keys:
+                return v
+            sk, _ = skeleton_of_key(v)
+            if sk in pack_skel:
+                return pack_skel[sk][0]
+        return None
 
     found = {}   # literal -> first 位置
     tokens = {}  # 单词型候选
@@ -132,8 +184,15 @@ def main():
                     elif SHORT_TOKEN.match(lit) and lit not in keys:
                         tokens.setdefault(lit, f"{rel}:{lineno}")
 
-    todo = {k: v for k, v in found.items() if k not in keys}
-    covered = [k for k in found if k in keys]
+    todo = {}
+    covered = []
+    for k, where in found.items():
+        if covered_by(k):
+            covered.append(k)
+        else:
+            # 待翻译列表里给出「语言包应该加的 key 形式」：
+            # 插值文案要写成 Close %@，而不是 Close \(tab.title)。
+            todo[key_variants(k)[0]] = where
 
     os.makedirs(OUT_DIR, exist_ok=True)
     with open(os.path.join(OUT_DIR, "to-translate.tsv"), "w", encoding="utf-8") as fh:

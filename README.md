@@ -1,424 +1,484 @@
-# Compositor 简体中文版
+# Compositor 简体中文语言包
 
-> **把 macOS 图像编辑器 [Compositor](https://github.com/robbietilton/Compositor) 完整汉化的非官方简体中文发行版。**
-> 不用自己装 Xcode、不用懂代码，下载双击就能用；上游发新版时这个仓库会自动跟上。
+**给 [Compositor](https://github.com/robbietilton/Compositor)（macOS 图像编辑器）用的外挂简体中文语言包。**
+双击一个脚本就能把界面变成中文，双击另一个就能完全还原。不编译、不打包、不修改任何可执行代码。
 
-| | |
-| --- | --- |
-| 当前跟随上游 | **v1.4.6**（2026-10-08 发布） |
-| 界面文案覆盖率 | **92.9%**（已翻译 1070 / 共扫出 1152 条） |
-| 语言包词条总数 | 1312 条 |
-| 运行要求 | **macOS 26.0 或更高** + **Apple 芯片**（M 系列） |
-| 签名方式 | ad-hoc（未做 Apple 公证，首次打开需放行一次） |
-
-**如果你是来找中文版 Compositor 的，直接跳到 [下载](#下载) → [安装](#安装) 就行。**
+[![语言包词条](https://img.shields.io/badge/语言包-1312_条-blue)](#能翻译到什么程度)
+[![可翻译文案覆盖](https://img.shields.io/badge/可翻译文案覆盖-99.5%25-brightgreen)](#能翻译到什么程度)
+[![上游](https://img.shields.io/badge/上游-v1.4.6-lightgrey)](https://github.com/robbietilton/Compositor/releases)
+[![许可证](https://img.shields.io/badge/许可证-MIT-green)](LICENSE)
 
 ---
 
 ## 目录
 
-- [一、这是什么](#一这是什么)
-- [二、运行环境](#二运行环境)
-- [三、下载](#下载)
-- [四、安装](#安装)
-- [五、升级到新版](#升级到新版)
-- [六、恢复到官方原版 / 卸载](#恢复到官方原版--卸载)
-- [七、汉化到什么程度](#汉化到什么程度)
-- [八、常见问题](#常见问题)
-- [九、反馈问题](#反馈问题)
-- [十、给想自己构建的人](#给想自己构建的人)
+- [这是什么](#这是什么)
+- [这不是什么](#这不是什么)
+- [运行环境](#运行环境)
+- [快速开始](#快速开始)
+  - [安装](#安装)
+  - [还原官方版](#还原官方版)
+  - [手动安装（不想跑脚本）](#手动安装不想跑脚本)
+- [怎么更新](#怎么更新)
+- [能翻译到什么程度](#能翻译到什么程度)
+  - [实测数据](#实测数据)
+  - [为什么有些地方还是英文](#为什么有些地方还是英文)
+  - [其他已知限制](#其他已知限制)
+- [常见问题](#常见问题)
+- [反馈与贡献](#反馈与贡献)
+- [给维护者](#给维护者)
 - [许可与声明](#许可与声明)
 
 ---
 
-## 一、这是什么
+## 这是什么
 
-[Compositor](https://github.com/robbietilton/Compositor) 是一款免费开源的 macOS 图像编辑器，
-作者是 Wonder Assembly LLC。它的定位是「Photoshop 的平替」：图层、蒙版、调整图层、
-图层效果、Camera Raw 滤镜、选区、绘画与修饰、PSD 导入、命令面板（⌘F）……该有的都有，
-而且完全免费、源码开放。
+一份 `zh-Hans.lproj/Localizable.strings` —— 简体中文的界面文案对照表，
+外加两个双击就能用的 shell 脚本。
 
-**但它只有英文界面。** 上游作者明确表示不接受本地化相关 PR
-（[#57](https://github.com/robbietilton/Compositor/issues/57) /
-[#74](https://github.com/robbietilton/Compositor/issues/74) /
-[#123](https://github.com/robbietilton/Compositor/issues/123) /
-[#205](https://github.com/robbietilton/Compositor/issues/205) /
-[#222](https://github.com/robbietilton/Compositor/issues/222)），
-社区提交的十几个汉化 PR 也都没被合并。
+Compositor 是 SwiftUI 写的，界面上的每一句文案在渲染时都会去查这张表。
+官方版本里没有中文表，所以只能显示英文。本项目做的就是**把这张表放进去**，
+然后让 app 重新签名一次（改了内容不重签，macOS 会拒绝启动）。
 
-所以这个仓库走的是另一条路：**不往上游推代码，而是把汉化做成一个独立、可复现的发行版。**
+整个过程**不碰 app 的可执行文件**，图像处理、色彩管理、PSD 读写这些逻辑一行都不动。
 
-具体做法是：拉取上游源码 → 自动打一层本地化补丁 → 用 Xcode 编译 → 注入中文语言包 →
-ad-hoc 签名 → 打包成 DMG 发布。整个过程由 GitHub Actions 自动完成。
+安装脚本会顺手做三件贴心的事：
 
-### 你能得到什么
-
-* **开箱即用的中文界面**：下载 `一键安装汉化版.command` 双击，或手动装 DMG。
-* **不是「大部分中文」**：连小工具组件、滑杆提示、弹窗按钮、撤销栈里的操作名
-  （「添加图层」「对齐图层」…）这些上游最容易被漏掉的地方都翻了。覆盖率 92.9%。
-* **能一键退回官方原版**：安装时会把你原来那份原厂副本放进废纸篓，
-  随时可以一键还原，签名和公证都是完好的。
-* **持续跟进上游更新**：本仓库每 6 小时检查一次上游 Release，
-  发现新版会自动重新扫描新出现的界面文案、补译、重新编译发包。
-
-### 这不是什么
-
-* **不是官方版本**，与 Wonder Assembly LLC **没有任何隶属或合作关系**。
-* **不会上传你的任何数据**。汉化只改界面文案，图片处理逻辑一行没动。
-* **不吃掉你的工程文件**。`.comp` 工程、PSD、导出格式全部与官方版一致、可互操作。
+1. **先备份**一份完整的官方原版到 `~/Library/Application Support/Compositor-zh-Hans/backup/`，
+   还原时直接拷回来，连 Apple 的原厂签名和公证票据都会恢复；
+2. **关掉 Sparkle 自动更新** —— 这是必须的，否则官方新版会在后台被拉下来，把中文界面覆盖回英文；
+3. **清掉隔离属性并重签名**，省得你每次都要去「系统设置 → 隐私与安全性」里放行。
 
 ---
 
-## 二、运行环境
+## 这不是什么
 
-| 要求 | 说明 |
+- **不是二次编译的发行版**。仓库里没有上游源码副本，也不产出 DMG / zip 安装包。
+  安装时只往 app 里放一份文本文件。
+- **不是官方项目**。上游作者 [明确表示不接受本地化 PR](#与上游的关系)，所以本项目以「外挂」形式独立存在。
+- **不是万能的**。有一类文案靠外挂翻不了，原因见[为什么有些地方还是英文](#为什么有些地方还是英文)，
+  这不是漏翻，是方案的能力边界。
+
+---
+
+## 运行环境
+
+| 项 | 要求 |
 | --- | --- |
-| **macOS 26.0 或更高** | 上游工程把 `MACOSX_DEPLOYMENT_TARGET` 设为 `26.0`，比这更低的系统**无法运行**，也装不上 |
-| **Apple 芯片**（M1/M2/M3/M4…） | 上游只支持 Apple silicon，不支持 Intel Mac |
-| 磁盘空间 | 约 200 MB |
-| 网络 | 只有「一键安装」脚本需要联网下载；用 DMG 手动装则完全离线 |
-
-> **为什么系统要求这么高？** 这是上游自己的选择 —— 它用了 macOS 26 才有的 API。
-> 这不是汉化引入的限制，装官方原版同样要求 macOS 26。
+| 系统 | **macOS 26.0 或更新**（上游 `LSMinimumSystemVersion = 26.0`） |
+| 处理器 | **Apple 芯片**（上游只发布了 arm64 版本，Intel Mac 装不了） |
+| 磁盘 | 语言包本身约 80 KB；备份会额外占用约 11 MB |
+| 权限 | 首次运行需要在「系统设置 → 隐私与安全性 → App 管理」里给终端放行（见 [FAQ](#常见问题)） |
 
 ---
 
-## 下载
+## 快速开始
 
-打开 **[最新 Release](../../releases/latest)**，里面有三个文件：
+### 安装
 
-| 文件名 | 说明 |
-| --- | --- |
-| `Compositor-<版本>-zh-Hans.dmg` | 汉化版安装包。想手动装、或想先留个备份就用它 |
-| `一键安装汉化版.command` | **推荐**。双击后自动下载最新汉化版并装好，还会处理 Gatekeeper 拦截 |
-| `一键恢复官方版.command` | 想退回官方原版时双击它 |
+1. 先装好**官方 Compositor**（[下载页](https://github.com/robbietilton/Compositor/releases)）。
+   如果没装，安装脚本也会问你要不要顺手下载安装。
+2. 到本仓库的 [Releases](../../releases/latest) 页，下载 **`一键安装语言包.command`**。
+3. **双击它**。
 
----
+> 首次双击如果提示「无法打开，因为来自身份不明的开发者」：
+> 在文件上**右键 → 打开 → 再点「打开」**。只需这一次。
 
-## 安装
+脚本会逐项告诉你它在做什么（找 app → 备份 → 写入语言包 → 改 Info.plist → 重签名 → 自检），
+每一步都有 ✅ / ⚠️ 标记。跑完之后**退出并重新打开 Compositor**（⌘Q），界面就是中文了。
 
-### 方式 A：一键安装（推荐）
-
-1. 在 Release 页面下载 **`一键安装汉化版.command`**。
-2. **双击它**。
-3. 如果 macOS 提示「无法打开，因为它来自身份不明的开发者」：
-   **右键点这个文件 → 选「打开」→ 再点「打开」**。（只有第一次需要这样做。）
-4. 终端窗口会打开，先列清楚它打算做什么，等你看完按回车确认。
-5. 装完窗口会停住并显示结果，按任意键关闭。
-
-它做的事，按顺序是：
-
-1. 检查你的电脑是不是 macOS 26 + Apple 芯片；
-2. 从本仓库 Release 下载最新的汉化版 DMG；
-3. 如果你「应用程序」里**已经有 Compositor**，把它**移到废纸篓**（注意：是移到废纸篓，不是删除）；
-4. 把汉化版装进 `/Applications`；
-5. 清掉 `com.apple.quarantine` 隔离属性（这样打开时不会弹「已损坏」）；
-6. 自检：确认语言包在包里、版本号正确；
-7. 告诉你旧版本在废纸篓里的**完整文件名**，随时可以拖回去。
-
-> 如果你不想让它问你，可以加 `--yes`：
-> `bash scripts/install.sh --yes`（跳过确认，其余行为一样）
-
-### 方式 B：手动安装 DMG
-
-1. 下载 `Compositor-<版本>-zh-Hans.dmg`；
-2. 双击挂载；
-3. 把里面的 **Compositor** 拖进「应用程序」（DMG 里已经放好了「应用程序」快捷方式）；
-4. 首次打开被拦的话，见下一节。
-
-### 首次打开被 macOS 拦住
-
-因为这个包**没有 Apple 公证**（公证需要每年 99 美元的开发者账号），
-macOS 会拦一下。有两种放行方式：
-
-**方法一（最简单）**
-
-1. 在「应用程序」里找到 Compositor；
-2. **右键**（或按住 Control 点）→ 选「**打开**」；
-3. 弹窗里再点一次「**打开**」。
-
-**方法二（如果方法一没出现「打开」按钮）**
-
-1. 先双击一次 Compositor（会失败，没关系）；
-2. 打开 **系统设置 → 隐私与安全性**；
-3. 往下拉，会看到「已阻止使用 Compositor……」，点旁边的「**仍要打开**」；
-4. 再双击一次就可以了。
-
-> 用「一键安装」脚本的话，第 5 步会直接清掉隔离属性，通常**根本不会遇到这个问题**。
-
-### 它会覆盖我原来的 Compositor 吗？
-
-不会丢东西，但会替换文件位置：
-
-* 旧的那份会被**移动**到 `~/.Trash`，文件名形如 `Compositor-备份-20261008-153000.app`；
-* 你的工程文件、偏好设置都在别的地方，完全不受影响；
-* 想换回来：打开废纸篓，把那个 `.app` 拖回「应用程序」即可。
-
----
-
-## 升级到新版
-
-**上游发新版之后，这个仓库会自动编译出对应的中文版。**
-你不需要做任何事，只要在 [Releases](../../releases/latest) 看到新版本时，
-再跑一次「一键安装汉化版」就行 —— 它会自动把旧版送进废纸篓、装上新版。
-
-### 为什么汉化版关掉了「自动更新」
-
-上游的 Compositor 自带 Sparkle 自动更新。汉化版**必须把它关掉**，否则：
-
-> 下次它自动更新，会下载回一份**没有中文语言包的官方版本**，你的界面就变回英文了。
-
-所以汉化版做了三件事：
-
-1. `SUEnableAutomaticChecks` / `SUAutomaticallyUpdate` 都设为 `false`（不再后台自动更新）；
-2. 菜单里的「检查更新…」改成**打开本仓库的 Releases 页面** —— 也就是中文版的更新入口；
-3. 更新源指向本仓库。
-
-一句话：**汉化版的更新走本仓库，不走上游。**
-
----
-
-## 恢复到官方原版 / 卸载
-
-### 一键还原
-
-下载 Release 里的 **`一键恢复官方版.command`**，双击。它会：
-
-1. **优先**从废纸篓里找你原来那份原厂副本，直接还原回去（签名、公证都是完好的）；
-2. 废纸篓里没有（比如你清空过），就自动从上游 GitHub Release 重新下载官方 DMG 装上；
-3. 最后自检，确认包里的中文语言包**已经不在了**。
-
-也可以指定想还原到哪个上游版本：
+也可以克隆仓库后本地运行：
 
 ```bash
-bash scripts/restore.sh --tag v1.4.6
+git clone https://github.com/你的用户名/Compositor-zh-Hans.git
+cd Compositor-zh-Hans
+bash scripts/install.sh              # 会先列清单，等你确认
+bash scripts/install.sh --yes        # 不想被问就加 --yes
 ```
 
-### 彻底卸载
+### 还原官方版
 
-1. 把「应用程序」里的 `Compositor.app` 拖进废纸篓；
-2. （可选）删掉偏好设置：
+同样在 [Releases](../../releases/latest) 页下载 **`一键还原官方版.command`**，双击。
+
+它会按优先级尝试：
+
+1. **从整包备份还原**（推荐路径）——
+   把安装时留下的官方原版拷回去。原厂 Developer ID 签名和公证票据都会回来，
+   等于这件事从没发生过。当前版本会先进废纸篓，随时能拖回来。
+2. **就地拆除**（没有备份时的退路）——
+   删掉语言包、把 `Info.plist` 的两处本地化设置改回官方值、重做一次 ad-hoc 签名。
+   界面立刻回到英文，但签名签不回原厂那样（没有 Apple 的私钥）。
+3. **从上游重装**（最彻底）——
    ```bash
-   rm -rf ~/Library/Preferences/com.wonderassembly.compositor.plist
-   rm -rf ~/Library/Saved\ Application\ State/com.wonderassembly.compositor.savedState
+   bash scripts/restore.sh --reinstall
    ```
-3. 别忘了一起清掉废纸篓里的备份，否则它一直占着几百 MB。
+   直接从上游下载官方版覆盖安装，约 10 MB。
+
+### 手动安装（不想跑脚本）
+
+<details>
+<summary>点开看完整步骤（需要终端，5 步）</summary>
+
+```bash
+APP="/Applications/Compositor.app"
+
+# ① 先把官方原版备份一份（很重要，退路全靠它）
+ditto "$APP" ~/Compositor-官方备份.app
+
+# ② 把语言包放进去
+mkdir -p "$APP/Contents/Resources/zh-Hans.lproj"
+cp zh-Hans.lproj/Localizable.strings "$APP/Contents/Resources/zh-Hans.lproj/"
+
+# ③ 告诉系统优先挑中文
+PL="$APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleDevelopmentRegion zh-Hans" "$PL"
+/usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations array" "$PL"
+/usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations:0 string zh-Hans" "$PL"
+
+# ④ 关掉 Sparkle 自动更新（否则中文会被官方新版覆盖）
+/usr/libexec/PlistBuddy -c "Set :SUEnableAutomaticChecks false" "$PL"
+
+# ⑤ 清除隔离属性 + 重新签名（改了内容就必须重签，不然打不开）
+xattr -cr "$APP"
+codesign --force --sign - --deep "$APP"
+```
+
+如果第 ④ 步报 `Set: Entry, ":SUEnableAutomaticChecks", Does Not Exist`，
+把 `Set` 换成 `Add` 并把值写成 `bool false`。
+
+签名这一步如果报权限错误，把命令前面加 `sudo`，
+或者先在「系统设置 → 隐私与安全性 → App 管理」里给终端放行。
+
+</details>
 
 ---
 
-## 汉化到什么程度
+## 怎么更新
 
-**覆盖率 92.9%** —— 从源码里扫出 1152 条人可读的界面文案，已经翻了 1070 条。
+**上游发新版时，本仓库会自动跟上。** 流水线每 6 小时检查一次上游 Release：
 
-### 已经汉化的
+```
+上游发新 Release
+      │
+      ▼
+ 下载该 tag 的源码（不编译）
+      │
+      ▼
+ 全量扫描界面文案 → 与现有语言包做差集
+      │
+      ▼
+ 术语表优先 + LLM 兜底 补齐译文
+      │
+      ▼
+ 校验（格式 / 重复 key / 占位符一致性）
+      │
+      ▼
+ 提交语言包 → 发一个新的语言包 Release
+（附件：语言包 zip + 一键安装语言包.command + 一键还原官方版.command）
+```
 
-* 全部菜单、菜单项、快捷键说明；
-* 所有面板标题、字段标签、按钮、单选/分段控件；
-* 工具组件（笔刷、套索、渐变、形状、变换…）的标题与滑杆提示；
-* 弹窗与对话框的正文、按钮、错误提示；
-* **命令面板（⌘F）**里的全部工具名；
-* **撤销/重做栈里的操作名**（「添加图层」「对齐图层」「翻转画布」…）；
-* 数值读数的单位与说明文字（像素 / 百分比 / 英寸）。
+所以你**只需要重新下载一次 `一键安装语言包.command` 再双击**，
+它会把新语言包覆盖进去（并且**不会**重复备份，原版备份始终是最初那一份）。
 
-### 没有汉化的，以及为什么
+<details>
+<summary>也可以完全手动：只更新语言包文件</summary>
 
-剩余 82 条**故意不翻**，翻了反而会出问题：
+```bash
+curl -fsSL -o /tmp/Localizable.strings \
+  https://raw.githubusercontent.com/你的用户名/Compositor-zh-Hans/main/zh-Hans.lproj/Localizable.strings
+cp /tmp/Localizable.strings \
+  "/Applications/Compositor.app/Contents/Resources/zh-Hans.lproj/Localizable.strings"
+xattr -cr /Applications/Compositor.app
+codesign --force --sign - --deep /Applications/Compositor.app
+```
 
-| 类别 | 例子 | 为什么不动 |
+（只换语言包文本时，`Info.plist` 不用再改，重签一次即可。）
+</details>
+
+---
+
+## 能翻译到什么程度
+
+这是本项目最需要说清楚的部分。
+
+### 实测数据
+
+对上游 v1.4.6 源码做的静态分析（用 `scripts/tools/analyze_coverage.py` 复现）：
+
+| 类别 | 数量 | 外挂能翻吗 |
 | --- | --- | --- |
-| PSD 二进制里的标记 | `8BIM`、`TySh` | 这是文件格式的内部标识，改了会读不出 PSD |
-| 纯数字/数值读数 | `1024 × 768`、`100%` | 本来就不需要翻译 |
-| 设备与商品名 | `MacBook`、`iPhone`、`Studio Display` | 品牌名不译 |
-| 字符串插值的切分碎片 | `R `、` —   G —   B —`、`Tool › ` | 是拼装格式串时的中间产物，单独翻译会错位 |
+| **A 类**：字面量直接写在本地化位置上<br><sub>`Text("Add Layer")`、`.help("Invert")`、`Label("New", systemImage: "plus")`</sub> | **423 个文案** | ✅ **能** |
+| **B 类**：变量 / 表达式出现在同一位置<br><sub>`Text(title)`、`.help(help)`、`Text($0.rawValue)`</sub> | 205 处 / 95 种写法 | ❌ **不能** |
 
-### 一个已知限制
+语言包 1312 条词条，对 A 类覆盖 **421 / 423 = 99.5%**
+（剩下两个是空串和 `·`，本来就不该翻）。
 
-**命令面板（⌘F）的搜索仍然按英文匹配。** 显示是中文，但要搜到某个工具，
-得输入它的英文名（例如输入 `brush` 能找到「画笔」）。
-原因是每个条目只有一份文本，既当显示名又当检索关键字；改成中文会让英文搜不到，
-反而更难用。这是刻意的取舍。
+> 顺便说一句：A 类里有 27 条是**靠「插值 → 格式串」命中的**。
+> 源码里写 `Text("Close \(tab.title)")`，运行时 SwiftUI 查的 key 其实是 `Close %@`，
+> 所以语言包里存的是 `"Close %@" = "关闭 %@"`。
+> 这也是为什么这个语言包的 key 长得有点怪 —— 不是乱写，是 SwiftUI 就这么查。
+
+### 为什么有些地方还是英文
+
+因为拿不到那个「查表的机会」。
+
+SwiftUI 里 `Text("Add Layer")` 和 `Text(name)` 看起来差不多，行为却完全不同：
+
+```swift
+let name = "Add Layer"
+
+Text("Add Layer")   // 参数是字面量 → 编译器当成 LocalizedStringKey → 查表 → ✅ 显示「添加图层」
+Text(name)          // 参数是 String   → 按原样渲染，根本不查表 → ❌ 永远显示 "Add Layer"
+Text(verbatim: name) // 显式声明「不要翻译」
+```
+
+`name` 里就算存着 `"Add Layer"`，语言包里也有这条译文，**它也不会去查** ——
+因为查不查表在**编译期**就由参数类型决定好了，运行时改不了。
+
+要翻译这 205 处，只有一条路：**改源码，把它们包一层查表助手，然后重新编译整个 app**。
+那是另一个项目要做的事（需要完整 Xcode 和一个 macOS 26 的构建环境），
+不在「外挂语言包」的能力范围内。
+
+**实际观感**：绝大多数界面（菜单、面板标题、工具栏提示、对话框、设置）都是中文。
+仍有英文残留的地方主要是：
+
+- 部分工具面板里的**分组标题**（如 Camera Raw 面板的小节名）
+- 一部分**鼠标悬停提示**
+- 命令面板里部分条目的**名字**
+
+如果你在这些地方看到英文，那不是漏翻，是翻不了。介意的话……只能等上游把文案挪到字面量位置。
+
+### 其他已知限制
+
+- **命令面板（⇧⌘P）的搜索按英文匹配。** 界面显示中文，但要搜某个工具得输入英文关键词。
+  这是搜索索引用了英文原文，同样属于要改源码才能解决的那一类。
+- **约 85 条词条没有译文**，但基本都是噪音：`8BIM`、`TySh` 这类 PSD 二进制标记、
+  纯数字读数、`MacBook` / `iPhone` 这类商品名，以及多行字符串被切碎的碎片。
+  这些翻了反而会出错，所以刻意留在 `translations/never-translate.txt` 里。
+- **不支持 Intel Mac。** 上游只发布了 arm64 版本。
+- **装完后 app 不再是 Apple 公证的。** 因为内容被改过又用了 ad-hoc 签名，
+  首次打开可能需要一次「右键 → 打开」（一键脚本会顺便清掉隔离属性，通常省掉这一步）。
 
 ---
 
 ## 常见问题
 
 <details>
-<summary><b>双击后提示「无法打开，因为它来自身份不明的开发者」</b></summary>
+<summary><b>双击 .command 提示「无法打开，因为来自身份不明的开发者」</b></summary>
 
-这是 macOS 对**未公证**应用的默认拦截。右键点文件 → 选「打开」→ 再点「打开」。
-只有第一次需要这样做，之后就正常了。
-
+在文件上**右键 → 打开 → 再点一次「打开」**。这是 macOS 对未签名脚本的保护，只需放行一次。
 </details>
 
 <details>
-<summary><b>提示「Compositor 已损坏，无法打开」</b></summary>
+<summary><b>脚本报「没有权限修改 /Applications/Compositor.app」</b></summary>
 
-这不是真的损坏，是隔离属性（quarantine）在起作用。清掉它：
+macOS 13 起有「App 管理」保护：即使是 app 的所有者，也不能随便改 `.app` 内部。
+
+打开 **系统设置 → 隐私与安全性 → App 管理**，把 **终端** 的开关打开
+（列表里没有「终端」的话，先运行一次脚本让它出现），然后重新运行本脚本。
+
+或者用管理员权限运行：
+
+```bash
+sudo bash scripts/install.sh
+```
+</details>
+
+<details>
+<summary><b>装完打开 Compositor 提示「已损坏，无法打开」</b></summary>
+
+隔离属性没清干净。手动补一刀：
 
 ```bash
 xattr -cr /Applications/Compositor.app
+codesign --force --sign - --deep /Applications/Compositor.app
 ```
 
-或者干脆用「一键安装汉化版.command」重装一次，脚本会自动清。
-
+还不行就还原后重来：`bash scripts/restore.sh`，再重新安装。
 </details>
 
 <details>
-<summary><b>装完了，但界面还是英文</b></summary>
+<summary><b>装完界面还是英文</b></summary>
 
-先确认你打开的是**新装进去的那份**：
+按顺序检查：
+
+1. **退出并重新打开 Compositor** —— 语言包在启动时加载，开着的时候注入不会生效。
+2. 确认语言包在位：
+   ```bash
+   ls -l /Applications/Compositor.app/Contents/Resources/zh-Hans.lproj/
+   ```
+3. 确认开发地区是 `zh-Hans`：
+   ```bash
+   /usr/libexec/PlistBuddy -c 'Print :CFBundleDevelopmentRegion' \
+     /Applications/Compositor.app/Contents/Info.plist
+   ```
+4. 确认系统语言里有中文：**系统设置 → 通用 → 语言与地区**，
+   「首选语言」列表里要有「简体中文」。
+5. 还不行就还原后重装：
+   ```bash
+   bash scripts/restore.sh && bash scripts/install.sh
+   ```
+</details>
+
+<details>
+<summary><b>会不会被官方更新覆盖回英文？</b></summary>
+
+不会。安装脚本做了两件事：
+
+- `SUEnableAutomaticChecks = false` —— 不再后台自动检查更新
+- `SUFeedURL` 指向本仓库的空 appcast —— 就算你手动点「检查更新」，
+  也只会得到「已是最新版本」
+
+想恢复官方更新器，跑一次还原脚本即可。
+
+代价是**你也不会自动收到官方新版本的提示**。想升级时就手动去
+[上游 Releases](https://github.com/robbietilton/Compositor/releases) 装新版，
+再重新双击一次 `一键安装语言包.command`。
+</details>
+
+<details>
+<summary><b>Intel Mac 能装吗？</b></summary>
+
+不能。上游只发布了 arm64（Apple 芯片）版本，Intel Mac 上根本装不了官方 app，
+语言包自然也无从附体。
+</details>
+
+<details>
+<summary><b>这个语言包会动我的图片处理、色彩管理吗？</b></summary>
+
+不会。语言包只是一份文本对照表，脚本只做「往 `Resources/` 里放一个文件夹」和
+「改 `Info.plist` 里两个本地化键」这两件事。
+`Contents/MacOS/` 下的可执行文件一个字节都没改。
+</details>
+
+<details>
+<summary><b>图层名、文件名、文本图层的内容会被翻译吗？</b></summary>
+
+不会。用户自己的数据（图层名、文档名、文本图层的文字）从来不经过界面文案查表，
+不存在被翻译的可能。
+</details>
+
+<details>
+<summary><b>术语用词跟 Photoshop 中文版一致吗？</b></summary>
+
+尽量对齐。`translations/glossary.tsv` 是按 Photoshop 简体中文版的用词整理的术语表
+（图层 / 选区 / 绘画 / 调整 / 变换 / 文字 / 界面 分组），共 259 条。
+`translations/curated.tsv` 是 183 条人工校对的整句译文。
+流水线补新词时**术语表优先**，所以用词会保持一致。
+
+发现用词不统一或不符合 PS 习惯，欢迎[提 Issue](../../issues)，附截图最好。
+</details>
+
+<details>
+<summary><b>这个语言包免费吗？安全吗？</b></summary>
+
+免费，MIT 许可。所有脚本都是纯文本、可以直接读，
+客户端不联网、不上传任何数据。
+
+安装脚本唯一的网络行为是从本仓库下载语言包
+（以及在你没装官方版时，从上游下载官方安装包）。
+
+唯一的例外在 CI 那边：如果仓库维护者配置了 `LLM_API_KEY`，
+流水线会用大模型翻译新增的界面短语，发出去的内容只有英文短语本身，不含任何用户数据。
+</details>
+
+<details>
+<summary><b>我能自己改译文吗？</b></summary>
+
+可以，两种方式：
+
+- **只改本机**：直接编辑
+  `/Applications/Compositor.app/Contents/Resources/zh-Hans.lproj/Localizable.strings`，
+  然后 `xattr -cr` + 重签一次。（下次跑一键安装会被覆盖。）
+- **让所有人都受益**：改 `translations/curated.tsv`（两列：英文 `<TAB>` 中文），
+  提个 PR。下一轮同步会自动合进语言包。
+</details>
+
+---
+
+## 反馈与贡献
+
+- **汉化不对 / 有漏译 / 术语不统一** → [提 Issue](../../issues)，
+  附上**截图**和你是在哪个位置看到的，最好再说明期望的中文用词。
+  截图比文字描述好定位得多。
+- **想改译文** → 直接改 `translations/curated.tsv` 提 PR。
+- **发现某个英文残留靠语言包其实能修** → 那是我的分析漏了，
+  请指出具体位置，我会补进语言包。
+
+---
+
+## 给维护者
+
+<details>
+<summary><b>仓库结构</b></summary>
+
+```
+Compositor-zh-Hans/
+├── zh-Hans.lproj/
+│   └── Localizable.strings          语言包本体（唯一的核心资产，1312 条）
+├── 一键安装语言包.command             面向使用者的双击入口（薄壳）
+├── 一键还原官方版.command             同上
+├── appcast.xml                      空 feed，用来切断 Sparkle 自动更新
+├── scripts/
+│   ├── install.sh                   注入语言包 + 备份 + 改 Info.plist + 分层重签
+│   ├── restore.sh                   还原（备份 → 就地拆除 → 从上游重装，三级降级）
+│   ├── fetch-upstream.sh            下载上游源码 tarball（只为扫文案）
+│   ├── make-langpack.sh             打包发布用的语言包 zip
+│   ├── set-repo.sh                  把 __REPO__ 占位符换成你的仓库地址
+│   ├── selfcheck.sh                 提交前一键自检（9 项）
+│   └── tools/
+│       ├── extract_strings.py       全量扫描界面文案 + 与语言包做差集
+│       ├── analyze_coverage.py      统计「外挂能翻多少」的权威口径（A/B 类）
+│       ├── translate_missing.py     术语表优先 + LLM 兜底
+│       ├── merge_translations.py    把译文合并进语言包
+│       ├── check-strings.py         校验格式 / 重复 key / 占位符一致性
+│       ├── update_state.py          写回 state/upstream.json
+│       ├── make_release_notes.py    生成 Release 说明
+│       └── lint-shell.py            shell 雷区检查（见下方「踩过的坑」）
+├── translations/
+│   ├── glossary.tsv                 术语表（259 条，按 Photoshop 中文版用词）
+│   ├── curated.tsv                  人工校对译文（183 条）
+│   ├── auto.tsv                     自动补译结果
+│   └── never-translate.txt          确认不翻译的（91 条：PSD 常量、商品名…）
+├── state/
+│   ├── upstream.json                上游版本与本仓库统计
+│   └── pending/untranslated.tsv     待人工处理的词条
+└── .github/workflows/
+    └── sync-upstream.yml            定时跟随上游 → 更新语言包 → 发 Release
+```
+</details>
+
+<details>
+<summary><b>本地开发与验证</b></summary>
 
 ```bash
-ls /Applications/Compositor.app/Contents/Resources/ | grep zh-Hans
+# 拉一份上游源码（只为扫文案，不编译）
+bash scripts/fetch-upstream.sh v1.4.6
+
+# 看「外挂到底能翻多少」——这是最该关注的那个数字
+python3 scripts/tools/analyze_coverage.py _upstream
+
+# 看有哪些新文案没翻
+python3 scripts/tools/extract_strings.py _upstream zh-Hans.lproj/Localizable.strings
+
+# 补译 + 合并 + 校验
+python3 scripts/tools/translate_missing.py
+python3 scripts/tools/merge_translations.py translations/curated.tsv translations/auto.tsv
+python3 scripts/tools/check-strings.py
+
+# 提交前跑一遍自检（9 项，含 shell 雷区与覆盖率）
+bash scripts/selfcheck.sh --src _upstream
 ```
 
-应该能看到 `zh-Hans.lproj`。如果没有，说明装的是官方版（比如系统里有两份），
-用「一键安装汉化版」重装一次。
+想启用 LLM 兜底翻译，本地这样跑：
 
-另外注意：汉化版已经把 `CFBundleDevelopmentRegion` 设成 `zh-Hans`、并且只声明这一种语言，
-所以**不管你的系统语言是什么，都会显示中文**，不需要去改系统语言。
-
-</details>
-
-<details>
-<summary><b>macOS 版本不够 / 我是 Intel Mac</b></summary>
-
-上游 Compositor 要求 **macOS 26.0+ 且 Apple 芯片**，汉化版继承同样要求
-（我们只改文案，不动代码和最低系统版本）。装不了的话只能升级系统或换机器。
-
-</details>
-
-<details>
-<summary><b>它是免费的吗？会不会有广告/收费？</b></summary>
-
-上游是 MIT 许可的免费开源软件，汉化版同样是 MIT，**完全免费、无广告、无内购**。
-这个仓库不接收任何形式的付费。
-
-</details>
-
-<details>
-<summary><b>汉化会不会影响图片处理结果？</b></summary>
-
-不会。补丁**只动界面文案的取用方式**，图像处理、PSD 解析、导出编码的代码一行没改。
-另外即便补丁出现了意外，它的失败模式也只是「这句没翻译」——
-因为我们用的查表函数在查不到时会**原样返回**，绝不会显示错内容，更不会崩溃。
-
-</details>
-
-<details>
-<summary><b>我的图层名 / 文件名会被翻译吗？</b></summary>
-
-不会。补丁对用户内容（图层名 `item.layerName`、工程名 `tab.title`）
-做了**白名单排除**，明确不查表。
-所以你把图层命名为 "Save" 不会突然变成「存储」。
-
-</details>
-
-<details>
-<summary><b>汉化的质量是怎么保证的？</b></summary>
-
-三道关：
-
-1. **术语表优先**：`translations/glossary.tsv` 里是按 **Photoshop 中文版**的用词
-   定的术语（图层 / 选区 / 绘画 / 调整 / 变换 / 文字 / 界面分组），命中即用，保证前后一致；
-2. **人工校对本优先**：`translations/curated.tsv` 是逐条看过的译文，自动结果永远不会覆盖它；
-3. **自动校验**：每次合并都会检查 `.strings` 语法、重复 key、**占位符是否与原文一致**
-   （`%@` 的数量和种类必须对得上，否则会漏掉变量甚至崩溃）。
-
-新词条如果术语表和 LLM 都拿不准，会被丢进 `state/pending/untranslated.tsv` 等人处理，
-**不会硬塞一个瞎猜的翻译进去**。
-
-</details>
-
-<details>
-<summary><b>我可以自己改译文吗？</b></summary>
-
-可以，而且很欢迎。最短路径：
-
-1. Fork 本仓库；
-2. 直接编辑 `zh-Hans.lproj/Localizable.strings`，或把译文加进 `translations/curated.tsv`；
-3. 提 PR。
-
-`curated.tsv` 是「人工校对」通道，优先级最高，下次自动同步时不会被覆盖。
-
-</details>
-
----
-
-## 反馈问题
-
-* **汉化不对 / 有漏译 / 术语不统一** → 在本仓库提 [Issue](../../issues/)，
-  附上**截图**和你是在哪个位置看到的，最好再说明期望的中文用词。
-* **App 本身的功能 bug**（图片处理出错、导出异常、崩溃）→ 请提到
-  [上游仓库](https://github.com/robbietilton/Compositor/issues)，
-  并且**说明你用的是官方版还是汉化版**。汉化只改文案，功能问题都在上游。
-* **安装脚本报错** → 把终端里的完整输出贴上来，那里面已经带了定位信息。
-
----
-
-## 给想自己构建的人
-
-不需要自己构建就能用（见上文）。以下内容只在你**想改译文、想自己出包**时才有用。
-
-### 目录说明
-
-| 路径 | 作用 |
-| --- | --- |
-| `zh-Hans.lproj/Localizable.strings` | **本仓库的主要作品**：全部简体中文词条（1312 条） |
-| `translations/curated.tsv` | 人工校对的译文（优先级最高，自动结果不会覆盖它） |
-| `translations/glossary.tsv` | 术语表。改这里就能影响下一版所有新词条的用词 |
-| `translations/auto.tsv` | 自动补齐的译文（术语表 + LLM 的产出，可随时删掉重来） |
-| `translations/never-translate.txt` | 永不翻译清单（PSD 常量、单位、商品名…） |
-| `state/upstream.json` | 已同步到的上游版本、覆盖率、历史记录 |
-| `state/pending/untranslated.tsv` | 术语表和 LLM 都没搞定的词条，等人处理 |
-| `scripts/tools/localize_patch.py` | **核心**：把上游源码改造成可完整汉化的版本 |
-| `scripts/tools/extract_strings.py` | 扫出所有界面文案，与语言包做差集 |
-| `scripts/tools/translate_missing.py` | 术语表优先 + LLM 兜底补译文 |
-| `scripts/tools/merge_translations.py` | 把译文合并进语言包（含去重、占位符检查） |
-| `scripts/tools/check-strings.py` | 语言包校验（语法、重复 key、占位符一致性） |
-| `scripts/tools/lint-shell.py` | shell 脚本雷区检查（见下文「踩过的坑」） |
-| `scripts/tools/lint-swift.py` | L() 调用形状检查（见下文「踩过的坑」） |
-| `scripts/bootstrap.sh` | 取上游源码 + 打补丁 |
-| `scripts/build.sh` | 编译 + 注入语言包 + 签名 + 打 DMG |
-| `scripts/selfcheck.sh` | 出包前的全套自检 |
-| `scripts/install.sh` / `restore.sh` | 一键装 / 一键还原 |
-| `scripts/set-repo.sh` | 把仓库里所有 `__REPO__` 占位符换成你的地址 |
-
-### 自动化流水线
-
+```bash
+LLM_API_KEY=sk-xxx LLM_MODEL=gpt-4o-mini python3 scripts/tools/translate_missing.py --llm
 ```
-上游发新 Release
-      │
-      │ 每 6 小时轮询一次
-      ▼
-┌─────────────────────────────────────────────────────────┐
-│ Sync upstream translations   (.github/workflows/…)      │
-│  1. 比对 state/upstream.json 记的 tag 与上游最新 tag      │
-│  2. 变了 → 浅克隆那个 tag 到 _upstream/                   │
-│  3. 打本地化补丁（localize_patch.py）                     │
-│  4. 扫描全部界面字面量，与语言包做差集 = 「新菜单项」        │
-│  5. 术语表优先命中 → 未命中的交 LLM 兜底 → 剩下进 pending  │
-│  6. 合并进 Localizable.strings，跑校验，更新 state        │
-│  7. 提交                                                  │
-└─────────────────────────────────────────────────────────┘
-      │
-      │ workflow_run（同步成功才接力）
-      ▼
-┌─────────────────────────────────────────────────────────┐
-│ Build & release macOS app   (.github/workflows/…)       │
-│  1. 自检：雷区 / L() 形状 / 幂等 / swiftc -parse / 覆盖率  │
-│  2. xcodebuild Release（ad-hoc 签名，日志落盘）           │
-│  3. 注入 zh-Hans.lproj + 改 CFBundleDevelopmentRegion    │
-│  4. 重签名 + 自检 + 打 DMG                               │
-│  5. 发布 Release，附上一键安装 / 一键恢复脚本              │
-└─────────────────────────────────────────────────────────┘
-```
+</details>
 
-判定「上游有没有新增菜单项」的做法**不是比对菜单**，而是把新版本源码里所有
-「人可读的字面量」全量抽出来跟现有语言包做差集。这样无论上游是加了菜单项、
-改了提示文案，还是把原本硬编码的字符串搬进了新组件，都跑不掉。
-
-### 首次建仓后要做三件事
+<details>
+<summary><b>首次建仓要做的事</b></summary>
 
 ```bash
 # 1. 把仓库里所有 __REPO__ 换成你的地址（幂等，跑两次也没事）
@@ -428,224 +488,110 @@ git add -A && git commit -m '设置仓库地址' && git push
 # 2. GitHub 仓库 → Settings → Actions → General
 #    Workflow permissions 选 "Read and write"
 #    勾上 "Allow GitHub Actions to create and approve pull requests"
-#    （不设的话 CI 无法提交语言包、也无法建 Release）
+#    （不设的话 CI 没法提交语言包、也没法建 Release）
 
 # 3. （可选）想启用 LLM 兜底翻译：
 #    Settings → Secrets and variables → Actions
-#      Secret: LLM_API_KEY
+#      Secret:   LLM_API_KEY
 #      Variable: LLM_BASE_URL（默认 https://api.openai.com/v1）
 #      Variable: LLM_MODEL（默认 gpt-4o-mini）
 #    不配也能跑：术语表命中的照补，其余留在 state/pending/ 等人工过。
+
+# 4. 手动跑一次 Actions → Sync upstream translations
+#    第一次会因为没有 lang-v* Release 而强制出一版，之后按上游版本走。
 ```
+</details>
 
-然后到 Actions 手动跑一次 **Build & release macOS app**（输入留空），
-就能拿到第一个 `v1.4.6-zh` Release。
+<details>
+<summary><b>写脚本时踩过的坑（后来人会再踩一遍）</b></summary>
 
-> **忘了跑第 1 步也不要紧。** build 流水线每次都会用本次运行的真实仓库名
-> 再跑一遍 `set-repo.sh`，所以 fork 之后不改任何文件，出的包也会正确指向你自己的仓库
-> （Sparkle 更新源、「检查更新」菜单、一键脚本的下载地址）。
-> 但本地直接跑 `scripts/bootstrap.sh` 时没有这个兜底，它会明确报错让你补 `--repo`。
-
-### 本地复现
+**① macOS 的 bash 是 3.2，会把 `$VAR` 后面紧跟的中文吞进变量名**
 
 ```bash
-bash scripts/bootstrap.sh                # 取上游源码 + 打补丁 → _upstream/
-bash scripts/selfcheck.sh                # 雷区 / L() 形状 / 幂等 / 语法 / 语言包 / 覆盖率
-bash scripts/build.sh                    # 编译 + 打包 → dist/*.dmg（需要完整 Xcode）
+APP_VER="1.4.6"
+echo "版本：$APP_VER（已汉化）"     # ❌ 变量名被解析成 "APP_VER（" → unbound variable
+echo "版本：${APP_VER}（已汉化）"   # ✅
 ```
 
-`scripts/build.sh` 需要**完整 Xcode 26**。如果 `xcode-select -p` 指向的是
-Command Line Tools，它会在第一步就明确报错退出（只有 `swiftc -parse` 是不够编译的）。
-自检那步不需要 Xcode，可以随时单独跑。
+要命的是 **Linux 的 bash 5 完全没这问题** —— 所以 CI 全绿，只有用户双击时炸。
+全仓库一律写 `${VAR}` 形式。`scripts/tools/lint-shell.py` 专门拦这个，已接进自检。
 
-网络受限时（`git clone` 走不通），可以拿一份本地上游源码副本离线打补丁：
+**② `set -euo pipefail` 下，命令替换失败会让脚本静默死掉**
 
 ```bash
-bash scripts/bootstrap.sh --from-local /path/to/upstream-src \
-     --src /tmp/up --repo 你的用户名/Compositor-zh-Hans v1.4.6
-bash scripts/selfcheck.sh --src /path/to/upstream-src
+SIG="$(codesign -dv "$APP" 2>&1 | awk ...)"   # 未签名时 codesign 返回非 0
 ```
 
-### 为什么需要「本地化补丁」：问题到底出在哪
+`set -o pipefail` 之后整条赋值语句的退出码就是非 0，`set -e` 直接终止 ——
+而且常常是在打印完 banner 之后，用户只看到标题就没了。
+修法是末尾补 `|| true`，或者把值包进 `if`，让后面的判空和友好报错有机会执行。
 
-上游界面文案全都有，但分两类：
+**③ 占位符哨兵不能写成连着的字面量**
 
-**A 类 —— 字面量直接出现在本地化位置**
-
-```swift
-Text("Add layer effect")            // SwiftUI 拿它当 LocalizedStringKey 查表
-.help("Increase the brush size")
-```
-
-这类只要往 `.app` 里放一个 `zh-Hans.lproj/Localizable.strings` 就能汉化。
-
-**B 类 —— 字面量先赋给 String，再进视图**
-
-```swift
-let title = "Adjustment"                        // 先存成 String
-Circle().fill(gradient)                          // …
-
-Text(title)                                      // ← String 重载：原样渲染，不查表
-.help("Fade the selection by \(pixels) pixels")  // ← 插值：运行时已格式化，查不到
-```
-
-`Text(_ content: String)`、`.help(_ text: String)` 这类**接收 String 的重载不会查表**。
-字符串插值 `"Nudge \(direction) 1 px"` 更麻烦：它在运行时就已经拼好了，
-就算真去查表也匹配不上 `"Nudge %@ 1 px"` 这样的 key。
-
-**这就是「大部分界面已经中文了，但小工具组件和弹窗提示还是英文」的根因。**
-
-补丁做三件事解决它：
-
-1. 注入运行时查表助手（`Compositor/Localized.swift`）：
-
-   ```swift
-   func L(_ key: String) -> String {
-       guard !key.isEmpty else { return key }
-       return Bundle.main.localizedString(forKey: key, value: key, table: nil)
-   }
-   ```
-
-   `value: key` 是关键 —— **查不到就原样返回**。最坏结果是「没翻译」，绝不会显示错内容或崩溃，
-   所以对用户数据（图层名、文件名）也是安全的。
-
-2. 把 B 类的渲染点包一层：`Text(title)` → `Text(L(title))`。
-
-3. 把插值消息改写成显式格式串：`"Nudge \(d) 1 px"` → `LF("Nudge %@ 1 px", d)`。
-
-### 踩过的坑（每个都真实炸过一次）
-
-<details>
-<summary><b>坑 1：正则表达不了括号配平</b></summary>
-
-第一版用一条正则匹配 `Text(...)` 的实参，结果在这行上翻车：
-
-```swift
-.help("Add layer effect").accessibilityLabel("Layer effects")
-```
-
-字符类 `[^()]` 无法表达「括号要配平」，正则把第一个 `)` 一起吃掉了，
-一次匹配跨到了第二个修饰符上，产出
-`.help(L("Add layer effect").accessibilityLabel("Layer effects"))` —— 括号少一个，代码编不过。
-
-现在改成**括号配平 + 字符串字面量感知的逐实参扫描**（`wrap_line()` / `_find_close()`）；
-跨行、含 `\(` 插值、含嵌套调用的实参一律放过。
-
-</details>
-
-<details>
-<summary><b>坑 2：多参数调用被整体包进 L()</b></summary>
-
-```swift
-Label("New", systemImage: "plus")
-→ Label(L("New", systemImage: "plus"))     # 语法合法，编译期报 extra argument
-```
-
-`L()` 只收一个参数，把**整个实参列表**塞进去必然编译失败。
-但 `swiftc -parse` 只做语法分析，这类错误它**完全看不出来** ——
-于是「本地自检全绿、CI 的 xcodebuild 以 65 退出」，只能靠反复重跑 15 分钟的
-macOS runner 试错。
-
-修法：多参数调用**只包第一个实参** → `Label(L("New"), systemImage: "plus")`。
-（对 `Label` 而言，第一个参数从 `LocalizedStringKey` 换成 `String` 会走
-`init<S: StringProtocol>(_ title: S, systemImage:)` 重载，而它本来就不查表 ——
-正好是我们想要的，查表已经由 `L()` 做完了。）
-
-为防止再犯，新增 `scripts/tools/lint-swift.py` 并接进自检，
-专门检查 L() 的调用形状（多实参 / 参数标签）。
-
-</details>
-
-<details>
-<summary><b>坑 3：补丁包了「非 String」的表达式</b></summary>
-
-补丁是**文本级**改写，个别位置可能把 Int 型枚举裸值、可选值、自定义类型也包进来，
-编译不过就整个包都出不来。
-
-修法：给 `L()` 加一个兜底重载，把失败模式统一成「不翻译」而不是「编译失败」：
-
-```swift
-func L(_ value: Any) -> String {
-    if let text = value as? String { return L(text) }
-    return String(describing: value)
-}
-```
-
-Swift 的重载决议优先选更具体的类型，所以 `L("字面量")` 仍然命中那个精确重载，行为不变。
-
-</details>
-
-<details>
-<summary><b>坑 4：<code>$VAR</code> 后面跟着中文（macOS 专属）</b></summary>
-
-macOS 自带的是 bash **3.2**，在 UTF-8 locale 下会把紧跟在变量名后面的多字节字符
-吞进变量名：
+`set-repo.sh` 用 `sed` 全局替换 `__REPO__`。如果脚本里有一行是拿它做比较：
 
 ```bash
-# 在 macOS 上会报 "TARGET（: unbound variable" 并终止脚本
-say "✅ 安装完成：$TARGET（版本 $NEW_VER）"
-# 正确写法
-say "✅ 安装完成：${TARGET}（版本 ${NEW_VER}）"
+if [ "$REPO" = "__REPO__" ]; then REPO=""; fi
 ```
 
-要命的地方在于：**Linux 的 bash 5 完全不会这样**，所以 CI 全绿，
-只有用户在自己机器上双击一键脚本时才炸。这类问题在 `install.sh` / `restore.sh`
-里一共 18 处，都已修掉。
+替换完就会变成 `if [ "$REPO" = "你的用户名/Compositor-zh-Hans" ]` ——
+**拿真实仓库名和自己比**，于是正常传进来的 `--repo` 也被清空。
 
-为了不让它回来，加了 `scripts/tools/lint-shell.py`，并接进 `selfcheck.sh`，命中即失败。
-
-</details>
-
-<details>
-<summary><b>坑 5：<code>set -euo pipefail</code> + 命令替换失败 = 脚本静默死掉</b></summary>
-
-`VAR="$(可能失败的命令 | 另一个命令)"` 的退出码就是整条赋值语句的退出码，
-`set -e` 会直接终止脚本，后面那句友好的报错永远轮不到执行。
-
-典型受害者：`codesign -dv`（未签名包返回非 0）、`curl`（断网）、
-`grep`（无匹配返回 1）、`find | while read`（目录不存在）。
-
-修法：末尾补 `|| true`，或把值包进 `if`，让判空和友好报错有机会执行。
-
-</details>
-
-<details>
-<summary><b>坑 6：占位符哨兵被 <code>sed</code> 自己替换掉</b></summary>
-
-`set-repo.sh` 是拿 `sed` 全局替换 `__REPO__` 的。如果某个脚本里有一行
-「判断 REPO 是不是还等于占位符」，而它老老实实写成了连着的字面量，
-那么 `sed` 会把**这一行**也替换掉：
+症状格外阴：本地手动跑完全正常（本地没跑过 set-repo），只有 CI 上炸。
+写法是**两段拼接**，让 sed 匹配不到：
 
 ```bash
-if [ "$REPO" = "你的用户名/Compositor-zh-Hans" ]; then   # 原本是 "__REPO__"
-  REPO=""                    # ← 于是 --repo 传进来的正常值也被清空
-fi
+SENTINEL="__RE""PO__"
+if [ "$REPO" = "$SENTINEL" ]; then ...; fi
 ```
 
-症状很阴：**本地手动跑一切正常**（没跑过 `set-repo.sh`，字面量还是占位符），
-但 CI 上一定失败，报「请用 --repo」，而命令里明明带着 `--repo`。
+`set-repo.sh` 替换完会立刻复查这个哨兵是否完好，坏了就硬失败。
 
-修法是把哨兵拆成两段字符串拼接（`__RE""PO__`，中间插一对空引号），`sed` 就匹配不到了。
-`set-repo.sh` 替换完会立刻自查这两处哨兵是否完好，坏了**直接退出 1**。
+**④ `grep -c` + `|| echo 0` 会输出两行**
 
+`grep -c` 无匹配时打印 `0` 且以 1 退出，再 `|| echo 0` 就是两行 0，
+后面 `[ "$n" -gt 0 ]` 直接报 `integer expression expected`。
+改用 `grep -o ... | wc -l | tr -d ' '`。
+
+**⑤ BSD grep 不支持 BRE 里的 `\|`**
+
+macOS 上是 BSD grep，`grep 'a\|b'` 会静默无匹配（不报错！），
+排查时能得到完全错误的结论。用 `grep -E` 或 `egrep`。
+
+**⑥ YAML 的 `run: |` 里嵌 heredoc 要小心**
+
+块标量会自动 dedent，一般没问题，但如果 heredoc 内容里有以 `*` 开头的行，
+YAML 会把它当别名解析并报错。复杂的多行逻辑一律抽成独立脚本文件 ——
+顺带还有个好处：能本地单独跑、单独测，不用每次都推上去看 CI。
+
+**⑦ 自检脚本绝不能有副作用**
+
+早期版本的 `selfcheck.sh` 会真的调用 `install.sh` 来验证参数守卫 ——
+结果它把用户 `/Applications` 里的 app 重新注入并重签了一遍。
+现在所有会改动真实安装的检查都改成静态检查，或者用不存在的路径确保提前退出。
 </details>
-
-### 已知限制（技术视角）
-
-* **约 82 条未翻译**，理由见 [汉化到什么程度](#汉化到什么程度)。
-* **命令面板搜索仍按英文匹配**，理由同上。
-* **未做 Apple 公证**，首次打开可能要「右键 → 打开」。
-* **上游若大改视图层**，补丁的锚点可能失配。这时 CI 会报「插值规则未命中」或
-  「带 L() 的渲染点少于 300 个」而失败 —— 这是有意设计的报警，不是静默降级。
 
 ---
 
 ## 许可与声明
 
-上游 Compositor 为 MIT 许可，版权归 Wonder Assembly LLC。本仓库对上游代码的改动、
-以及新增的语言包与脚本，同样以 MIT 发布。详见 [LICENSE](LICENSE) 与 [NOTICE](NOTICE)。
+- 上游 [Compositor](https://github.com/robbietilton/Compositor) 为 **MIT** 许可，
+  版权所有 (c) 2026 Wonder Assembly LLC。
+- 本仓库的语言包、脚本与译文同样以 **MIT** 发布，详见 [LICENSE](LICENSE)。
+- 本项目与 Wonder Assembly LLC **无任何隶属或合作关系**，是非官方作品。
+  完整声明见 [NOTICE](NOTICE)。
 
-**本项目与 Wonder Assembly LLC 无任何隶属或合作关系**，是非官方的社区汉化发行版。
+### 与上游的关系
 
-Compositor 这个名字、以及原始程序的著作权属于 Wonder Assembly LLC；
-本仓库只提供界面翻译与自动构建流程。
+上游作者已多次明确表示不接受本地化相关的 Pull Request
+（[#57](https://github.com/robbietilton/Compositor/issues/57) /
+[#74](https://github.com/robbietilton/Compositor/issues/74) /
+[#123](https://github.com/robbietilton/Compositor/issues/123) /
+[#205](https://github.com/robbietilton/Compositor/issues/205) /
+[#222](https://github.com/robbietilton/Compositor/issues/222)），
+历史上十几个本地化 PR 都没有被合并。
+
+因此本项目**不向上游提交任何改动**，也不包含上游源码，纯粹以「外挂语言包」的形式存在。
+如果哪天上游自己支持了中文，这个仓库就可以退役了。
+
+> Compositor 的所有商标与版权归 Wonder Assembly LLC 所有。

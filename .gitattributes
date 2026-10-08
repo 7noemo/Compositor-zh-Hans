@@ -14,4 +14,5 @@ translations/auto.tsv              linguist-generated=true
 build/                             linguist-vendored
 
 # Release 里上传的是二进制，GitHub 语言统计别把它算进仓库
+*.zip      binary
 *.dmg      binary

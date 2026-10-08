@@ -1,17 +1,10 @@
-# 运行时拉取的上游源码（bootstrap.sh 会重新克隆，不入库）
+# 运行时拉取的上游源码（fetch-upstream.sh 会重新下载，不入库）
 _upstream/
 
-# 构建产物
+# 本地产出
 build/
 dist/
-DerivedData/
-*.xcarchive/
-*.dmg
 *.zip
-
-# 万一有人在仓库根目录直接跑了 xcodebuild
-*.xcodeproj/
-AppIcon*/
 
 # 系统 / 编辑器
 .DS_Store

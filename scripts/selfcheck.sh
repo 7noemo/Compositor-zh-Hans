@@ -1,153 +1,257 @@
 #!/usr/bin/env bash
 #
-# 本地/CI 自检：在上游源码上打完补丁后，检查补丁本身有没有把代码改坏。
+# 仓库自检 —— 提交 / 推送之前跑一遍，把能提前发现的坑都拦住。
 #
-#   scripts/selfcheck.sh [--src DIR]
+#   bash scripts/selfcheck.sh
+#   bash scripts/selfcheck.sh --src /path/to/上游源码      # 额外做覆盖率检查
+#   bash scripts/selfcheck.sh --min-coverage 80
 #
-# 检查项
-#   1. 各 Python 工具语法正常
-#   1b. shell 脚本没有「中文项目特有」的雷区（macOS bash 3.2 变量名吞噬等）
-#   2. 补丁可重复执行（幂等）—— 第二遍不应再产生任何改动
-#   2b. L() 调用形状正确（单实参、无参数标签）—— swiftc -parse 抓不到这类错
-#   3. 补丁后 146 个 .swift 全部能通过 swiftc -parse（真正的语法校验）
-#   4. 语言包通过 check-strings.py
-#   5. 覆盖率不低于阈值
+# 检查项：
+#   1. 所有 Python 工具语法正常
+#   2. shell 雷区 lint（$VAR 后跟中文、set -e 下的失败命令替换 等）
+#   3. 语言包通过 check-strings.py（格式、重复键、占位符一致性）
+#   4. 安装 / 还原脚本的关键逻辑自检（占位符哨兵完好、参数守卫生效）
+#   5. 打包脚本能真的产出 zip，且 zip 里有语言包
+#   6. （可选）拿上游源码算一遍覆盖率，低于阈值就失败
 #
-# 注意 2b 与 3 的分工：swiftc -parse 只做语法分析，
-# `Label(L("a", systemImage: "b"))` 语法合法、编译期才报 extra argument，
-# 而它会让 xcodebuild 以 65 退出。所以单独用文本扫描兜住这一层。
-#
-# 这一步的价值：CI 里它比完整编译快得多，能在几分钟内拦下
-# 「上游改了写法导致 Rule 落空」或「补丁把括号改坏了」这类问题。
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SELF_DIR/.." && pwd)"
 cd "$ROOT"
 
 SRC_ARG=""
+# 阈值针对「外挂可翻译文案」口径（A 类）。这个数字本来就该接近 100%，
+# 因为剩下翻不了的根本不在分母里（它们属于 B 类）。
+MIN_COVERAGE=95
+
 while [ $# -gt 0 ]; do
   case "$1" in
-    --src) [ $# -ge 2 ] || { echo "--src 后面要跟上上游源码目录" >&2; exit 2; }
+    --src) [ $# -ge 2 ] || { echo "--src 后面要跟目录" >&2; exit 2; }
            SRC_ARG="$2"; shift 2 ;;
-    *) echo "未知参数：$1" >&2; exit 2 ;;
+    --min-coverage) [ $# -ge 2 ] || { echo "--min-coverage 后面要跟数字" >&2; exit 2; }
+           MIN_COVERAGE="$2"; shift 2 ;;
+    -h|--help) sed -n '2,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "未知参数：${1}" >&2; exit 2 ;;
   esac
 done
 
+FAILED=0
+ok()   { printf '  \033[32m✅\033[0m %s\n' "$*"; }
+bad()  { printf '  \033[31m❌\033[0m %s\n' "$*"; FAILED=1; }
+warn() { printf '  \033[33m⚠️\033[0m %s\n' "$*"; }
+head1(){ printf '\n\033[1m%s\033[0m\n' "$*"; }
+
 PY="${PYTHON:-python3}"
-MIN_COVERAGE="${MIN_COVERAGE:-85}"
+command -v "$PY" >/dev/null 2>&1 || PY=/usr/bin/python3
+command -v "$PY" >/dev/null 2>&1 || { echo "找不到 python3" >&2; exit 1; }
+
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/compositor-selfcheck.XXXXXX")"
-trap 'rm -rf "$WORK"' EXIT
+cleanup() { rm -rf "$WORK"; }
+trap cleanup EXIT
 
-fail=0
-step() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
-bad()  { printf '\033[31m   ❌ %s\033[0m\n' "$*"; fail=1; }
-ok()   { printf '\033[32m   ✅ %s\033[0m\n' "$*"; }
+printf '\033[1m==== Compositor 简体中文语言包 · 仓库自检 ====\033[0m\n'
 
-# ---------------------------------------------------------------- 1. 工具语法
-step "检查工具链语法"
+# ---------------------------------------------------------------- 1. Python 语法
+head1 "1. Python 工具语法"
+n=0
 for f in scripts/tools/*.py; do
-  if "$PY" -c "import ast,sys;ast.parse(open('$f',encoding='utf-8').read())"; then
-    ok "$f"
+  [ -f "$f" ] || continue
+  if "$PY" -c "import ast,sys;ast.parse(open(sys.argv[1],encoding='utf-8').read())" "$f" 2>/dev/null; then
+    n=$((n + 1))
   else
-    bad "$f 语法错误"
+    bad "语法错误：${f}"
+    "$PY" -c "import ast,sys;ast.parse(open(sys.argv[1],encoding='utf-8').read())" "$f" 2>&1 | tail -3 | sed 's/^/     /' || true
   fi
 done
+[ "$n" -gt 0 ] && ok "${n} 个 Python 工具语法正常"
 
-# ---------------------------------------------------------------- 1b. shell 雷区
-# 这一项是踩坑之后补的：macOS 自带的 bash 是 3.2，会把「$VAR 后面紧跟的中文/全角标点」
-# 吞进变量名（$TARGET（ → 变量 `TARGET（` → unbound variable 直接终止脚本）。
-# 而这种写法在 Linux 的 bash 5 上完全正常，所以只有用户机器上才炸，CI 看不出来。
-# 详见 scripts/tools/lint-shell.py 的头部注释。
-step "检查 shell 脚本雷区"
-if "$PY" scripts/tools/lint-shell.py .; then
-  ok "shell 脚本无 A 类雷区"
+# ---------------------------------------------------------------- 2. shell 雷区
+head1 "2. shell 雷区 lint"
+if [ -f scripts/tools/lint-shell.py ]; then
+  if "$PY" scripts/tools/lint-shell.py . > "$WORK/lint.out" 2>&1; then
+    ok "未发现雷区"
+  else
+    # lint 对「注释里的反例」不误报，所以这里报出来的都是真的要改
+    bad "发现 $(grep -c '^' "$WORK/lint.out" || true) 行问题："
+    sed 's/^/     /' "$WORK/lint.out"
+  fi
 else
-  bad "shell 脚本存在 A 类雷区（会在 macOS bash 3.2 上崩溃，见上）"
+  warn "缺少 scripts/tools/lint-shell.py，跳过"
 fi
 
-# ---------------------------------------------------------------- 2. 准备源码
-step "准备带补丁的源码"
-if [ -n "$SRC_ARG" ]; then
-  [ -d "$SRC_ARG/Compositor" ] || { bad "不是 Compositor 源码目录：$SRC_ARG"; exit 1; }
-  cp -R "$SRC_ARG" "$WORK/a"
+# ---------------------------------------------------------------- 3. shell 语法
+head1 "3. shell 语法"
+syntax_bad=0
+for f in scripts/*.sh 一键安装语言包.command 一键还原官方版.command; do
+  [ -f "$f" ] || continue
+  if ! bash -n "$f" 2>"$WORK/syntax.out"; then
+    bad "语法错误：${f}"
+    sed 's/^/     /' "$WORK/syntax.out"
+    syntax_bad=1
+  fi
+done
+[ "$syntax_bad" -eq 0 ] && ok "全部 shell 脚本语法正常"
+
+# ---------------------------------------------------------------- 4. 语言包
+head1 "4. 语言包"
+PACK="zh-Hans.lproj/Localizable.strings"
+if [ -s "$PACK" ]; then
+  CNT="$(grep -c '^"' "$PACK" || true)"
+  ok "语言包存在，${CNT} 条词条"
+  if "$PY" scripts/tools/check-strings.py > "$WORK/chk.out" 2>&1; then
+    ok "check-strings.py 通过"
+  else
+    bad "check-strings.py 未通过："
+    tail -20 "$WORK/chk.out" | sed 's/^/     /'
+  fi
 else
-  [ -d "_upstream/Compositor" ] || {
-    echo "   本地没有 _upstream/，先跑 scripts/bootstrap.sh" >&2
-    exit 2
-  }
-  cp -R "_upstream" "$WORK/a"
+  bad "语言包不存在：${PACK}"
 fi
 
-REPO="${GITHUB_REPOSITORY:-selfcheck/local}"
-"$PY" scripts/tools/localize_patch.py "$WORK/a" --repo "$REPO" >/dev/null
-ok "补丁应用完成"
+# ---------------------------------------------------------------- 5. 脚本关键逻辑
+head1 "5. 安装 / 还原脚本关键逻辑"
 
-# ---------------------------------------------------------------- 2b. 调用形状
-# swiftc -parse 只查语法，抓不到「L("a", systemImage: "b")」这类
-# 语法合法、编译期才报 extra argument 的写法 —— 而这种错误会让
-# xcodebuild 以 65 退出，整条出包流水线死掉，本地自检却全绿。
-step "检查 L() 调用形状（多实参 / 参数标签）"
-if "$PY" scripts/tools/lint-swift.py "$WORK/a/Compositor"; then
-  :
+# 5.1 占位符哨兵必须写成两段拼接 —— 否则 set-repo.sh 的 sed 会把「识别占位符
+#     的那一行」也替换掉，导致真实仓库名被当成占位符拒掉（CI 上踩过）。
+if grep -q 'RE""PO' scripts/install.sh 2>/dev/null; then
+  ok "install.sh 的占位符哨兵写法正确（两段拼接）"
 else
-  bad "L() 调用形状错误（xcodebuild 一定会失败，详见上）"
+  bad "install.sh 里的哨兵必须写成两段拼接，见文件里的 SENTINEL 那行"
 fi
 
-# ---------------------------------------------------------------- 3. 幂等
-step "验证补丁幂等（第二遍不应产生改动）"
-cp -R "$WORK/a" "$WORK/b"
-"$PY" scripts/tools/localize_patch.py "$WORK/b" --repo "$REPO" >/dev/null
-if diff -rq "$WORK/a" "$WORK/b" >/dev/null; then
-  ok "幂等"
+# 5.2 未替换占位符时必须有友好拦住。
+#     这里**只做静态检查**，绝不真的调用 install.sh —— 那是会动
+#     /Applications/Compositor.app 的操作，自检不能有副作用。
+if grep -q '还没配置仓库地址' scripts/install.sh 2>/dev/null && \
+   grep -q 'RE""PO' scripts/install.sh 2>/dev/null; then
+  ok "占位符守卫就位（静态检查：哨兵 + 提示文案）"
 else
-  bad "第二遍又改了东西，补丁不幂等："
-  diff -rq "$WORK/a" "$WORK/b" | head -10
+  bad "install.sh 缺少占位符守卫，或哨兵写法不对"
 fi
 
-# ---------------------------------------------------------------- 4. 语法
-step "swiftc -parse 语法校验"
-if ! command -v swiftc >/dev/null 2>&1; then
-  echo "   ⏭  没有 swiftc，跳过（CI 的 macOS runner 上会跑）"
-else
-  bad_files=0
-  total=0
-  while IFS= read -r f; do
-    total=$((total + 1))
-    if ! swiftc -parse "$f" >/dev/null 2>&1; then
-      bad_files=$((bad_files + 1))
-      bad "语法错误：$f"
-      swiftc -parse "$f" 2>&1 | head -4 | sed 's/^/      /'
+# 5.3 对不存在的 app 路径必须干脆报错 —— 这条是安全的：
+#     路径不存在会在第一个检查就退出，不会碰任何现有安装。
+#     传 --repo 是为了绕开「还没跑 set-repo.sh」这一关，直达 app 路径检查。
+if [ -f scripts/install.sh ]; then
+  if bash scripts/install.sh --repo selfcheck/local --app "$WORK/不存在的.app" --yes > "$WORK/app.out" 2>&1; then
+    bad "对一个不存在的 app 路径，install.sh 居然返回成功"
+  else
+    if grep -q '指定的 app 不存在' "$WORK/app.out"; then
+      ok "app 路径不存在时能正确报错"
+    else
+      warn "app 路径不存在时报错文案不明确："
+      tail -3 "$WORK/app.out" | sed 's/^/     /'
     fi
-  done < <(find "$WORK/a/Compositor" -name '*.swift' | sort)
-  [ "$bad_files" -eq 0 ] && ok "$total 个 Swift 文件全部通过"
+  fi
 fi
 
-# ---------------------------------------------------------------- 5. 语言包
-step "校验语言包"
-if "$PY" scripts/tools/check-strings.py > "$WORK/check.log" 2>&1; then
-  ok "$(grep -o '共 [0-9]* 条词条' "$WORK/check.log" | head -1)"
+# 5.4 还原脚本的同名安全检查
+if [ -f scripts/restore.sh ]; then
+  if bash scripts/restore.sh --app "$WORK/不存在的.app" --yes > "$WORK/rst.out" 2>&1; then
+    bad "对一个不存在的 app 路径，restore.sh 居然返回成功"
+  else
+    # 注意用 grep -E：macOS 是 BSD grep，BRE 不支持 \|
+    if grep -qE '指定的 app 不存在|没找到' "$WORK/rst.out"; then
+      ok "restore.sh 对不存在的路径能正确报错"
+    else
+      warn "restore.sh 报错文案不明确："
+      tail -3 "$WORK/rst.out" | sed 's/^/     /'
+    fi
+  fi
+fi
+
+# 5.4 仓库里不该再出现编译发行版的残留
+if grep -rq 'localize_patch\|xcodebuild\|build-release' --include='*.sh' --include='*.yml' --include='*.py' . 2>/dev/null; then
+  bad "还能找到编译发行版的残留引用（localize_patch / xcodebuild / build-release）"
+  grep -rn 'localize_patch\|xcodebuild\|build-release' --include='*.sh' --include='*.yml' --include='*.py' . 2>/dev/null | head -5 | sed 's/^/     /'
 else
-  bad "check-strings.py 未通过"
-  tail -20 "$WORK/check.log" | sed 's/^/      /'
+  ok "已无编译发行版残留"
 fi
 
-# ---------------------------------------------------------------- 6. 覆盖率
-step "统计覆盖率"
-"$PY" scripts/tools/extract_strings.py "$WORK/a" > "$WORK/extract.log" 2>&1 || true
-tail -8 "$WORK/extract.log" | sed 's/^/   /'
-PCT="$("$PY" -c "import json;print(json.load(open('build/stats.json'))['coverage_percent'])" 2>/dev/null || echo 0)"
-if [ -z "$PCT" ]; then PCT=0; fi
-if awk "BEGIN{exit !($PCT >= $MIN_COVERAGE)}"; then
-  ok "覆盖率 $PCT% ≥ 阈值 $MIN_COVERAGE%"
+# ---------------------------------------------------------------- 6. 打包
+head1 "6. 打包语言包"
+if bash scripts/make-langpack.sh "0.0.0-selfcheck" "$WORK/dist" > "$WORK/pack.out" 2>&1; then
+  ZIP="$WORK/dist/Compositor-zh-Hans-语言包-v0.0.0-selfcheck.zip"
+  if [ -f "$ZIP" ]; then
+    if unzip -l "$ZIP" 2>/dev/null | grep -q 'zh-Hans.lproj/Localizable.strings'; then
+      ok "zip 产出正常，且包含 zh-Hans.lproj/Localizable.strings"
+    else
+      bad "zip 里没有语言包"
+    fi
+  else
+    bad "没找到产出的 zip"
+  fi
 else
-  bad "覆盖率 $PCT% < 阈值 $MIN_COVERAGE%"
+  bad "make-langpack.sh 失败："
+  tail -10 "$WORK/pack.out" | sed 's/^/     /'
 fi
 
-# ---------------------------------------------------------------- 结论
+# ---------------------------------------------------------------- 7. Release 说明
+head1 "7. Release 说明生成"
+if "$PY" scripts/tools/make_release_notes.py --repo selfcheck/local --version 0.0.0 \
+     > "$WORK/notes.md" 2>"$WORK/notes.err"; then
+  if grep -q '一键安装语言包.command' "$WORK/notes.md"; then
+    ok "说明文件生成正常（$(wc -l < "$WORK/notes.md" | tr -d ' ') 行）"
+  else
+    bad "说明文件内容不完整"
+  fi
+else
+  bad "make_release_notes.py 失败："
+  tail -5 "$WORK/notes.err" | sed 's/^/     /'
+fi
+
+# ---------------------------------------------------------------- 8. YAML
+head1 "8. workflow YAML"
+if "$PY" -c 'import yaml' 2>/dev/null; then
+  for f in .github/workflows/*.yml; do
+    [ -f "$f" ] || continue
+    if "$PY" -c "
+import sys, yaml, pathlib
+d = yaml.safe_load(pathlib.Path(sys.argv[1]).read_text())
+assert 'jobs' in d, 'no jobs'
+print(len(d['jobs']))
+" "$f" > "$WORK/y.out" 2>"$WORK/y.err"; then
+      ok "${f}"
+    else
+      bad "${f} 解析失败："
+      tail -3 "$WORK/y.err" | sed 's/^/     /'
+    fi
+  done
+else
+  warn "本机没有 PyYAML，跳过（CI 上会有）"
+fi
+
+# ---------------------------------------------------------------- 9. 覆盖率
+head1 "9. 覆盖率（外挂方案口径）"
+if [ -n "$SRC_ARG" ]; then
+  if [ -d "$SRC_ARG" ]; then
+    if "$PY" scripts/tools/analyze_coverage.py "$SRC_ARG" \
+         --pack "$PACK" --json build/coverage.json --show-b 6 > "$WORK/cov.out" 2>&1; then
+      sed 's/^/     /' "$WORK/cov.out"
+      PCT="$("$PY" -c "
+import json;print(json.load(open('build/coverage.json'))['translatable']['coverage_percent'])" 2>/dev/null || echo 0)"
+      if "$PY" -c "import sys; sys.exit(0 if float('$PCT') >= float('$MIN_COVERAGE') else 1)"; then
+        ok "外挂可翻译文案覆盖率 ${PCT}% ≥ ${MIN_COVERAGE}%"
+      else
+        bad "覆盖率 ${PCT}% 低于阈值 ${MIN_COVERAGE}% —— 有新增文案没翻？"
+      fi
+    else
+      bad "analyze_coverage.py 失败："
+      tail -10 "$WORK/cov.out" | sed 's/^/     /'
+    fi
+  else
+    warn "目录不存在，跳过覆盖率检查：${SRC_ARG}"
+  fi
+else
+  warn "未传 --src，跳过覆盖率检查（加上参数即可启用）"
+fi
+
+# ---------------------------------------------------------------- 收尾
 printf '\n'
-if [ "$fail" -eq 0 ]; then
-  printf '\033[32m✅ 自检全部通过\033[0m\n'
+if [ "$FAILED" -eq 0 ]; then
+  printf '\033[32m==== ✅ 全部检查通过 ====\033[0m\n'
 else
-  printf '\033[31m❌ 自检未通过，请修好再出包\033[0m\n'
+  printf '\033[31m==== ❌ 有检查未通过，见上 ====\033[0m\n'
 fi
-exit "$fail"
+exit "$FAILED"

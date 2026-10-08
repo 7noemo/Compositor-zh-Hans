@@ -6,9 +6,10 @@
 #
 # 建仓之后跑一次就够了（CI 里也会自动跑，见 .github/workflows/*.yml）。
 # 需要替换的地方：
-#   * scripts/bootstrap.sh / install.sh      —— 补丁改写更新源、装完提示
-#   * 一键安装汉化版.command / 一键恢复官方版.command
-#   * .github/workflows/*.yml                —— Release 通知文案
+#   * scripts/install.sh                     —— 语言包下载地址、Sparkle feed 改写
+#   * 一键安装语言包.command / 一键还原官方版.command
+#   * .github/workflows/sync-upstream.yml    —— Release 附件与通知文案
+#   * state/upstream.json                    —— 记录本仓库地址
 #
 set -euo pipefail
 
@@ -23,14 +24,11 @@ if ! printf '%s' "$REPO" | grep -Eq '^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$'; then
 fi
 
 FILES=(
-  "scripts/bootstrap.sh"
-  "scripts/build.sh"
   "scripts/install.sh"
   "scripts/restore.sh"
-  "scripts/tools/localize_patch.py"
   "state/upstream.json"
-  "一键安装汉化版.command"
-  "一键恢复官方版.command"
+  "一键安装语言包.command"
+  "一键还原官方版.command"
 )
 
 # 刻意不动 README.md：里面出现的 __REPO__ 是「教你怎么替换」的示例文本，
@@ -65,16 +63,16 @@ for f in "${FILES[@]}"; do
 done
 
 # ---------------------------------------------------------------- 防回归
-# scripts/install.sh 与 scripts/bootstrap.sh 里各有一处「识别占位符是否还在」的哨兵，
+# scripts/install.sh 里有一处「识别占位符是否还在」的哨兵，
 # 必须写成「两个字符串字面量拼接」的形式（见 install.sh 的 SENTINEL 那一行）。
 # 原因：上面的 sed 匹配的是连着的占位符，一旦哪个脚本把它写成连着的，替换之后
-# 那一行就变成「拿真实仓库名和自己比」—— 于是连 --repo 传进来的正常值都会被清空。
+# 那一行就变成「拿真实仓库名和自己比」—— 于是正常的仓库名反而被判为占位符。
 #
-# 这个 bug 真的发生过一次：CI 上 build-release 报「请用 --repo OWNER/REPO」，
+# 这个 bug 真的发生过一次：CI 上报「请用 --repo OWNER/REPO」，
 # 而本地手动跑却完全正常（因为本地没跑过 set-repo.sh，字面量还是占位符）。
 # 所以这里替换完立刻验一遍，坏了就硬失败，别让它跑到 CI 里才暴露。
 broken=0
-for f in scripts/install.sh scripts/bootstrap.sh; do
+for f in scripts/install.sh; do
   [ -f "$f" ] || continue
   if ! grep -q 'RE""PO' "$f"; then
     echo "❗ ${f} 里的占位符哨兵被 sed 替换破坏了。" >&2
@@ -94,7 +92,7 @@ else
   echo "✅ 共替换 $total 处，仓库地址已设为 $REPO"
 fi
 
-# CI 里（.github/workflows/build-release.yml 会带着 $REPO 调这个脚本）不需要
+# CI 里（sync-upstream.yml 会带着 $REPO 调这个脚本）不需要
 # 「接下来你自己 commit / push」的提示 —— 那边是自动化跑的，打出来只会让人误会。
 if [ -n "${CI:-}" ]; then
   exit 0

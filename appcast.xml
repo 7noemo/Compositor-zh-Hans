@@ -1,20 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  占位 appcast。
+  空 appcast。
 
-  Compositor 使用 Sparkle 做自动更新。本汉化版在构建阶段会把
-  Config/Info.plist 的 SUFeedURL 指到这里，并且关掉自动检查，
-  目的是「不让原版更新器把汉化版覆盖回英文」。
+  Compositor 用 Sparkle 做自动更新。装了中文语言包之后，
+  如果放任官方更新器工作，它会把官方英文版拉下来覆盖掉语言包。
+  所以 scripts/install.sh 会做两件事：
 
-  这里刻意保持为空 feed（没有任何 <item>），
-  即使有用户手动触发检查，也只会得到「已是最新版本」。
+    * SUEnableAutomaticChecks = false     —— 不再自动检查
+    * SUFeedURL 指向本文件                —— 就算手动点「检查更新」，
+                                             也只会得到「已是最新版本」
 
-  新版本通过本仓库的 GitHub Releases 分发，见 README。
+  这里刻意保持为空 feed（没有任何 <item>）。
+  新语言包通过本仓库的 GitHub Releases 分发，见 README。
+
+  想恢复官方更新器，跑 scripts/restore.sh 即可。
 -->
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
-    <title>Compositor 简体中文版</title>
-    <description>本 feed 故意留空。请通过 GitHub Releases 获取新版本。</description>
+    <title>Compositor 简体中文语言包</title>
+    <description>本 feed 故意留空。语言包通过本仓库的 GitHub Releases 分发。</description>
     <language>zh-Hans</language>
   </channel>
 </rss>
