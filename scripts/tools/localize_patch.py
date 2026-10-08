@@ -585,7 +585,7 @@ TOTAL_WRAPPED = re.compile(
 MIN_WRAPPED = 300
 
 # ------------------------------------------------- Rule E：Sparkle 更新链路
-APPCAST_PLACEHOLDER = "https://raw.githubusercontent.com/__REPO__/main/appcast.xml"
+APPCAST_PLACEHOLDER = "https://raw.githubusercontent.com/7noemo/Compositor-zh-Hans/main/appcast.xml"
 
 
 def read(path):
@@ -601,7 +601,7 @@ def write(path, text):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("src", help="上游源码根目录")
-    ap.add_argument("--repo", default="__REPO__", help="你的 GitHub 仓库，形如 OWNER/REPO")
+    ap.add_argument("--repo", default="7noemo/Compositor-zh-Hans", help="你的 GitHub 仓库，形如 OWNER/REPO")
     args = ap.parse_args()
 
     root = os.path.abspath(args.src)

@@ -49,10 +49,10 @@ PY
 )"
 fi
 
-# 关键：state/upstream.json 里没跑过 set-repo.sh 时存的就是字面量 "__REPO__"。
+# 关键：state/upstream.json 里没跑过 set-repo.sh 时存的就是字面量 "7noemo/Compositor-zh-Hans"。
 # 它是「非空字符串」，所以上面那个 [ -z ] 拦不住它 —— 必须显式当空处理，
-# 否则会把 Sparkle 更新源、检查更新菜单都写成 https://github.com/__REPO__/... 。
-if [ "$REPO" = "__REPO__" ]; then
+# 否则会把 Sparkle 更新源、检查更新菜单都写成 https://github.com/7noemo/Compositor-zh-Hans/... 。
+if [ "$REPO" = "7noemo/Compositor-zh-Hans" ]; then
   REPO=""
 fi
 

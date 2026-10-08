@@ -10,7 +10,7 @@
 # 它会自动把 restore.sh 取下来再跑。
 set -uo pipefail
 
-REPO="__REPO__"
+REPO="7noemo/Compositor-zh-Hans"
 RAW="https://raw.githubusercontent.com/$REPO/main"
 
 cd "$(dirname "$0")" || exit 1

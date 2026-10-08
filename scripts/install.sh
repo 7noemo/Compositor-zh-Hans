@@ -16,7 +16,7 @@
 #   * 装完把备份位置告诉你，想退回原版就跑 scripts/restore.sh
 set -euo pipefail
 
-REPO_DEFAULT="__REPO__"
+REPO_DEFAULT="7noemo/Compositor-zh-Hans"
 REPO="${REPO_OVERRIDE:-$REPO_DEFAULT}"
 APP_NAME="Compositor"
 TARGET="/Applications/$APP_NAME.app"
