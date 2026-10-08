@@ -89,9 +89,51 @@ mkdir -p "$OUT"
 OUT_ABS="$(cd "$OUT" && pwd)"
 rm -f "$OUT_ABS/$ZIPNAME"
 
-( cd "$STAGE" && zip -qr "$OUT_ABS/$ZIPNAME" . )
+# ---------------------------------------------------------------- 打包
+# 这里刻意不用 /usr/bin/zip（Info-ZIP）。
+#
+# Info-ZIP 遇到非 ASCII 文件名时，只把原始 UTF-8 字节写进文件头，
+# 却**不会**置「UTF-8 文件名」标志位（general purpose bit 11）。
+# 结果：macOS / Linux 的解压工具多半会猜 UTF-8，看着正常；
+# 而 Windows 资源管理器按 CP437 解码，用户看到的是
+#     Φ»┤µÿÄ.txt
+# 这种乱码 —— 而它偏偏是「手动安装说明」那个文件，最需要被看到。
+#
+# Python 的 zipfile 在文件名无法用 ASCII 编码时会自动置上 bit 11，
+# 各平台解压工具都能正确还原。顺带的好处是不依赖外部 zip 命令。
+python3 - "$STAGE" "$OUT_ABS/$ZIPNAME" <<'PYZIP'
+import os
+import sys
+import zipfile
+
+stage, out = sys.argv[1], sys.argv[2]
+
+with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+    # 排序后再写：同一份内容每次打出来的字节完全一致，
+    # 便于用 diff / 校验和判断「语言包这次到底有没有变」。
+    for dirpath, dirnames, filenames in os.walk(stage):
+        dirnames.sort()
+        rel = os.path.relpath(dirpath, stage)
+        if rel != ".":
+            # 显式补一条目录项，有些老解压工具依赖它来建文件夹
+            z.writestr(zipfile.ZipInfo(rel.replace(os.sep, "/") + "/"), b"")
+        for name in sorted(filenames):
+            full = os.path.join(dirpath, name)
+            arc = name if rel == "." else os.path.join(rel, name)
+            z.write(full, arc)
+PYZIP
 
 echo "✅ 已生成：${OUT}/${ZIPNAME}"
 echo "   语言包 ${CNT} 条"
 echo "   内容："
-( cd "$STAGE" && find . -type f | sed 's|^\./|     |' )
+python3 - "$OUT_ABS/$ZIPNAME" <<'PYLIST'
+import sys
+import zipfile
+
+with zipfile.ZipFile(sys.argv[1]) as z:
+    for info in z.infolist():
+        # 顺便把编码方式打出来：出现 ASCII 是正常的，
+        # 但只要有中文名，那一行必须是 UTF-8（见上面的说明）。
+        tag = "UTF-8" if info.flag_bits & 0x800 else "ASCII"
+        print("     %-44s %7d B  [%s]" % (info.filename, info.file_size, tag))
+PYLIST

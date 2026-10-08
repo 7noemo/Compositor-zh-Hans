@@ -179,6 +179,26 @@ if bash scripts/make-langpack.sh "0.0.0-selfcheck" "$WORK/dist" > "$WORK/pack.ou
     else
       bad "zip 里没有语言包"
     fi
+    # 6.2 非 ASCII 文件名必须带 UTF-8 标志位（general purpose bit 11）。
+    #     曾经用 /usr/bin/zip 打包，它写原始 UTF-8 字节却不置这个标志位，
+    #     结果 Windows 资源管理器把「说明.txt」显示成「Φ»┤µÿÄ.txt」。
+    #     这条守卫就是为了让那个坑不能再回来。
+    "$PY" - "$ZIP" > "$WORK/zipenc.out" 2>&1 <<'PYZ' || true
+import sys, zipfile
+bad = []
+with zipfile.ZipFile(sys.argv[1]) as z:
+    for i in z.infolist():
+        if not i.filename.isascii() and not (i.flag_bits & 0x800):
+            bad.append(i.filename)
+        print(i.filename)
+if bad:
+    print("MISSING_UTF8_FLAG:" + ",".join(bad))
+PYZ
+    if grep -q '^MISSING_UTF8_FLAG:' "$WORK/zipenc.out"; then
+      bad "zip 里有非 ASCII 文件名没带 UTF-8 标志位（Windows 上会显示成乱码）：$(sed -n 's/^MISSING_UTF8_FLAG://p' "$WORK/zipenc.out")"
+    else
+      ok "zip 内非 ASCII 文件名均带 UTF-8 标志位"
+    fi
   else
     bad "没找到产出的 zip"
   fi
