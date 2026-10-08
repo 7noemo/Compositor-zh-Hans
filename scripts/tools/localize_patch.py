@@ -585,7 +585,11 @@ TOTAL_WRAPPED = re.compile(
 MIN_WRAPPED = 300
 
 # ------------------------------------------------- Rule E：Sparkle 更新链路
-APPCAST_PLACEHOLDER = "https://raw.githubusercontent.com/7noemo/Compositor-zh-Hans/main/appcast.xml"
+# 更新源不是常量，而是运行时用 --repo 拼出来的（见下面 Rule E 的实现：
+# "https://raw.githubusercontent.com/%s/main/appcast.xml" % args.repo）。
+# 这里原先放过一个 APPCAST_PLACEHOLDER 常量 —— 它既没被任何代码引用，
+# 又会给 scripts/set-repo.sh 的全局替换多制造一个「看起来像配置、其实是死值」
+# 的位置（被替换成某个具体仓库后更容易误以为它在起作用），已删除。
 
 
 def read(path):
@@ -601,8 +605,18 @@ def write(path, text):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("src", help="上游源码根目录")
-    ap.add_argument("--repo", default="7noemo/Compositor-zh-Hans", help="你的 GitHub 仓库，形如 OWNER/REPO")
+    ap.add_argument(
+        "--repo",
+        default=os.environ.get("GITHUB_REPOSITORY", ""),
+        help="你的 GitHub 仓库，形如 OWNER/REPO（必填：用来改写 Sparkle 更新源"
+             "与「检查更新」菜单，留空会把更新指向别人的仓库）",
+    )
     args = ap.parse_args()
+
+    if not args.repo:
+        print("❌ 缺少 --repo OWNER/REPO。它会写进 Info.plist 的 SUFeedURL 与"
+              "「检查更新」菜单，不能猜。", file=sys.stderr)
+        return 2
 
     root = os.path.abspath(args.src)
     if not os.path.isdir(os.path.join(root, "Compositor")):

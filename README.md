@@ -228,6 +228,39 @@ say "✅ 安装完成：${TARGET}（版本 ${NEW_VER}）"
 `grep`（无匹配返回 1）。修法是末尾补 `|| true`，或把值包进 `if`，
 让后面的判空和友好报错有机会执行。
 
+**「用来识别占位符」的哨兵，不能写成连着的字面量。**
+
+`scripts/set-repo.sh` 是拿 `sed` 全局替换 `__REPO__` 的。如果某个脚本里有一行
+「判断 REPO 是不是还等于占位符」，而它老老实实写成了连着的字面量，那么 `sed`
+会把**这一行**也替换掉，于是它变成：
+
+```bash
+if [ "$REPO" = "你的用户名/Compositor-zh-Hans" ]; then   # 原本是 "__REPO__"
+  REPO=""                    # ← 于是 --repo 传进来的正常值也被清空
+fi
+```
+
+症状很阴：**本地手动跑一切正常**（没跑过 `set-repo.sh`，字面量还是占位符），
+但 CI 上一定失败 —— `build-release` 会报
+`❗ 请用 --repo OWNER/REPO 告诉脚本你自己的仓库地址`，而命令里明明带着 `--repo`。
+
+修法是把哨兵拆成两段字符串拼接（`__RE""PO__` 这样，中间插一对空引号），
+`sed` 就匹配不到了：
+
+```bash
+PLACEHOLDER="__RE""PO__"
+if [ "$REPO" = "$PLACEHOLDER" ]; then REPO=""; fi
+```
+
+`scripts/install.sh` 与 `scripts/bootstrap.sh` 里各有一处这样的哨兵。
+为防止再写回去，`set-repo.sh` 替换完会立刻自查这两个文件里的哨兵是否完好，
+坏了就**直接退出 1**，不让它拖到 CI 才暴露。
+（`localize_patch.py` 里也有过一个从没被引用的 `APPCAST_PLACEHOLDER` 常量，
+同样会被替换成某个具体地址、看着像在生效其实毫无作用，已经删掉。）
+
+习惯上，任何**会被 `set-repo.sh` 扫到、又需要引用占位符本身**的代码，
+都要用上面这种拆分写法。
+
 ---
 
 ## 已知限制

@@ -49,10 +49,17 @@ PY
 )"
 fi
 
-# 关键：state/upstream.json 里没跑过 set-repo.sh 时存的就是字面量 "7noemo/Compositor-zh-Hans"。
-# 它是「非空字符串」，所以上面那个 [ -z ] 拦不住它 —— 必须显式当空处理，
-# 否则会把 Sparkle 更新源、检查更新菜单都写成 https://github.com/7noemo/Compositor-zh-Hans/... 。
-if [ "$REPO" = "7noemo/Compositor-zh-Hans" ]; then
+# 关键：没跑过 set-repo.sh 时，state/upstream.json 里存的仍是「占位符字面量」。
+# 它是「非空字符串」，所以上面那个 [ -z ] 拦不住 —— 必须显式当空处理，
+# 否则会把 Sparkle 更新源、「检查更新」菜单都写成 https://github.com/<占位符>/...
+#
+# 哨兵值刻意拆成两段写（和 scripts/install.sh 一样）：
+# set-repo.sh 会用 sed 全局替换「连着的占位符字面量」，若这里写成连着的，
+# 替换之后这行就变成「拿真实仓库名和自己比」—— 于是连 --repo 传进来的正常值
+# 也被清空，CI 上直接报「请用 --repo OWNER/REPO」，而本地手动跑反而一切正常。
+# 这个 bug 真发生过一次，别再改回连着的写法。
+PLACEHOLDER="__RE""PO__"
+if [ "$REPO" = "$PLACEHOLDER" ]; then
   REPO=""
 fi
 

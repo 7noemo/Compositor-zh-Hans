@@ -64,6 +64,29 @@ for f in "${FILES[@]}"; do
   fi
 done
 
+# ---------------------------------------------------------------- 防回归
+# scripts/install.sh 与 scripts/bootstrap.sh 里各有一处「识别占位符是否还在」的哨兵，
+# 必须写成「两个字符串字面量拼接」的形式（见 install.sh 的 SENTINEL 那一行）。
+# 原因：上面的 sed 匹配的是连着的占位符，一旦哪个脚本把它写成连着的，替换之后
+# 那一行就变成「拿真实仓库名和自己比」—— 于是连 --repo 传进来的正常值都会被清空。
+#
+# 这个 bug 真的发生过一次：CI 上 build-release 报「请用 --repo OWNER/REPO」，
+# 而本地手动跑却完全正常（因为本地没跑过 set-repo.sh，字面量还是占位符）。
+# 所以这里替换完立刻验一遍，坏了就硬失败，别让它跑到 CI 里才暴露。
+broken=0
+for f in scripts/install.sh scripts/bootstrap.sh; do
+  [ -f "$f" ] || continue
+  if ! grep -q 'RE""PO' "$f"; then
+    echo "❗ ${f} 里的占位符哨兵被 sed 替换破坏了。" >&2
+    echo "   它必须写成两段字符串拼接的形式（照着 scripts/install.sh 的 SENTINEL 那行写），" >&2
+    echo "   否则真实仓库名会被当成占位符拒掉，CI 里会报「请用 --repo」。" >&2
+    broken=1
+  fi
+done
+if [ "$broken" -ne 0 ]; then
+  exit 1
+fi
+
 echo
 if [ "$total" -eq 0 ]; then
   echo "ℹ️  没有发现 __REPO__ 占位符（可能已经设置过了）。"
