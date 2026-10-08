@@ -175,9 +175,15 @@ if [ -f scripts/restore.sh ]; then
 fi
 
 # 5.4 仓库里不该再出现编译发行版的残留
-if grep -rq 'localize_patch\|xcodebuild\|build-release' --include='*.sh' --include='*.yml' --include='*.py' . 2>/dev/null; then
+#     注意把自己排除掉 —— 报错文案里就带着这几个词，不排除的话永远自匹配。
+#     用 grep -E：macOS 是 BSD grep，BRE 的 \| 行为不可靠。
+if grep -rqE 'localize_patch|xcodebuild|build-release' \
+      --include='*.sh' --include='*.yml' --include='*.py' \
+      --exclude='selfcheck.sh' . 2>/dev/null; then
   bad "还能找到编译发行版的残留引用（localize_patch / xcodebuild / build-release）"
-  grep -rn 'localize_patch\|xcodebuild\|build-release' --include='*.sh' --include='*.yml' --include='*.py' . 2>/dev/null | head -5 | sed 's/^/     /'
+  grep -rnE 'localize_patch|xcodebuild|build-release' \
+      --include='*.sh' --include='*.yml' --include='*.py' \
+      --exclude='selfcheck.sh' . 2>/dev/null | head -5 | sed 's/^/     /'
 else
   ok "已无编译发行版残留"
 fi

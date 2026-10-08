@@ -82,6 +82,22 @@ Compositor 是 SwiftUI 写的，界面上的每一句文案在渲染时都会去
    （它就是前面说的「一键安装语言包」，只是因为 GitHub 的限制，附件名只能用英文。）
 3. **双击它**。
 
+> ⚠️ **双击提示「你没有正确的访问权限」？**
+>
+> 这是浏览器下载的通病：保存文件时**不带「可执行」权限位**，跟脚本本身无关。
+> 打开「终端」，把下面两行粘进去回车（就是把文件补上执行权限、去掉隔离标记）：
+>
+> ```bash
+> chmod +x ~/Downloads/install-zh-Hans.command
+> xattr -d com.apple.quarantine ~/Downloads/install-zh-Hans.command 2>/dev/null
+> ```
+>
+> 然后**再双击**就能用了。
+>
+> **不想碰终端？** 下载 [`Compositor-zh-Hans-langpack-v<版本>.zip`](../../releases/latest)
+> 解压后双击里面的「一键安装语言包.command」—— 压缩包里的文件保留着执行权限，
+> 不会遇到这个问题（最多遇到下面那条 Gatekeeper 提示，右键放行即可）。
+
 > **为什么附件名是英文？**
 >
 > GitHub 会**改写** Release 附件名里除 ASCII 以外的字符（官方文档原文：
@@ -197,6 +213,8 @@ codesign --force --sign - --deep "$APP"
 
 所以你**只需要重新下载一次 `install-zh-Hans.command` 再双击**，
 它会把新语言包覆盖进去（并且**不会**重复备份，原版备份始终是最初那一份）。
+注意**每次下载的新文件都没有执行权限**（浏览器不会沿用旧文件的属性），
+要按上面的两行再补一次；嫌烦就改下 zip，解压出来的一直能用。
 
 <details>
 <summary>也可以完全手动：只更新语言包文件</summary>
@@ -285,6 +303,22 @@ Text(verbatim: name) // 显式声明「不要翻译」
 <summary><b>双击 .command 提示「无法打开，因为来自身份不明的开发者」</b></summary>
 
 在文件上**右键 → 打开 → 再点一次「打开」**。这是 macOS 对未签名脚本的保护，只需放行一次。
+</details>
+
+<details>
+<summary><b>双击 .command 提示「无法执行，因为你没有正确的访问权限」</b></summary>
+
+浏览器保存下载文件时**不带「可执行」权限位**（`-rw-r--r--`），而 `.command`
+双击运行的前提是有 `x` 位。跟脚本内容无关，zip 包里存的是 0755，直接下载附件才会遇到。
+
+修复（终端里跑两行，或对照截图在「显示简介」里勾上「可执行」）：
+
+```bash
+chmod +x ~/Downloads/install-zh-Hans.command
+xattr -d com.apple.quarantine ~/Downloads/install-zh-Hans.command 2>/dev/null
+```
+
+第二行顺手去掉隔离标记，免得接着撞上上一条 Gatekeeper 提示。
 </details>
 
 <details>

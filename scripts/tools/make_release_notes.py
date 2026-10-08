@@ -27,6 +27,20 @@ TEMPLATE = """Compositor 的**简体中文语言包**，对应上游 **{up_tag}*
 下载本页 Assets 里的 `install-zh-Hans.command`，双击运行。
 它会自动找到已安装的 Compositor、备份一份官方原版，然后把语言包注入进去。
 
+> ### ⚠️ 双击提示「你没有正确的访问权限」？
+>
+> 浏览器保存下载文件时**不带「可执行」权限位**，而 `.command` 双击运行
+> 必须有它 —— 跟脚本内容无关。终端里跑两行再双击：
+>
+> ```bash
+> chmod +x ~/Downloads/install-zh-Hans.command
+> xattr -d com.apple.quarantine ~/Downloads/install-zh-Hans.command 2>/dev/null
+> ```
+>
+> 不想碰终端：下载下面的 zip，解压后双击里面的「一键安装语言包.command」
+> —— 压缩包内的文件保留执行权限，没有这个问题。
+> 若提示「无法打开，因为来自身份不明的开发者」，右键 → 打开 → 再点一次「打开」。
+
 **手动安装**
 
 下载 `{zip_name}`，解压得到 `zh-Hans.lproj`，把它拷进
@@ -47,7 +61,7 @@ TEMPLATE = """Compositor 的**简体中文语言包**，对应上游 **{up_tag}*
 > | `restore-official.command` | 一键还原官方版.command |
 > | `{zip_name}` | 压缩包内含上面两个脚本 + `说明.txt` |
 >
-> 功能完全一样，双击即可运行。
+> 功能完全一样。直接下载的附件需要先按上面补一次执行权限（zip 里的不用）。
 
 ## 想退回官方原版？
 

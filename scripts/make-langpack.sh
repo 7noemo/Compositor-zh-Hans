@@ -104,7 +104,15 @@ Compositor 简体中文语言包
     install-zh-Hans.command    就是「一键安装语言包.command」
     restore-official.command   就是「一键还原官方版.command」
 
-功能完全一样，双击即可运行。
+功能完全一样。不过**直接从浏览器下载的附件要补一次执行权限**才能双击：
+浏览器保存文件时不带「可执行」权限位，双击会提示「你没有正确的访问权限」。
+终端里跑（以安装脚本为例）：
+
+    chmod +x ~/Downloads/install-zh-Hans.command
+    xattr -d com.apple.quarantine ~/Downloads/install-zh-Hans.command 2>/dev/null
+
+解压本压缩包得到的不用补 —— zip 里存了完整的权限位。
+首次双击若提示「无法打开，因为来自身份不明的开发者」，右键 → 打开 → 再点一次「打开」。
 
 还原
 ----
