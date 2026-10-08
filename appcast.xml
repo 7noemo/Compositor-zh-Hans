@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  占位 appcast。
+
+  Compositor 使用 Sparkle 做自动更新。本汉化版在构建阶段会把
+  Config/Info.plist 的 SUFeedURL 指到这里，并且关掉自动检查，
+  目的是「不让原版更新器把汉化版覆盖回英文」。
+
+  这里刻意保持为空 feed（没有任何 <item>），
+  即使有用户手动触发检查，也只会得到「已是最新版本」。
+
+  新版本通过本仓库的 GitHub Releases 分发，见 README。
+-->
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Compositor 简体中文版</title>
+    <description>本 feed 故意留空。请通过 GitHub Releases 获取新版本。</description>
+    <language>zh-Hans</language>
+  </channel>
+</rss>

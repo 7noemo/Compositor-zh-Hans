@@ -1,0 +1,259 @@
+﻿# Compositor 简体中文 — 术语表
+#
+# 作用有三：
+#   1. 「术语表优先」翻译的第一命中源：key 归一化后与这里一致，直接采用，不再调用 LLM。
+#   2. 作为 LLM 兜底翻译的提示词（prompt）用词约束，保证新词条用词与已有译文一致。
+#   3. 人工复核的单一事实来源：对某个词不满意，改这里，再重跑流水线即可。
+#
+# 格式：英文 <TAB> 中文    （# 与空行忽略；大小写不敏感；首尾空白与弯/直引号会被归一化）
+# 术语一律遵循 Adobe Photoshop 简体中文版的用词习惯。
+
+# ---- 图层 ----
+Layer	图层
+Layers	图层
+Folder	组
+Group	组
+Background	背景
+Background Layer	背景图层
+New Layer	新建图层
+Duplicate Layer	复制图层
+Delete Layer	删除图层
+Merge Down	向下合并
+Flatten Image	拼合图像
+Rasterize	栅格化
+Layer Mask	图层蒙版
+Vector Mask	矢量蒙版
+Clipping Mask	剪贴蒙版
+Blend Mode	混合模式
+Opacity	不透明度
+Fill	填充
+Lock	锁定
+Visible	可见
+Hidden	隐藏
+Link	链接
+Unlink	取消链接
+Pass-through	穿透
+Normal	正常
+Multiply	正片叠底
+Screen	滤色
+Overlay	叠加
+Darken	变暗
+Lighten	变亮
+Color Dodge	颜色减淡
+Color Burn	颜色加深
+Soft Light	柔光
+Hard Light	强光
+Difference	差值
+Exclusion	排除
+Hue	色相
+Saturation	饱和度
+Color	颜色
+Luminosity	明度
+
+# ---- 选区 ----
+Selection	选区
+Marquee	选框
+Rectangular Marquee	矩形选框
+Elliptical Marquee	椭圆选框
+Lasso	套索
+Polygonal Lasso	多边形套索
+Magnetic Lasso	磁性套索
+Magic Wand	魔棒
+Object Selection	对象选择
+Quick Mask	快速蒙版
+Feather	羽化
+Expand	扩展
+Contract	收缩
+Invert	反选
+Select All	全选
+Deselect	取消选区
+Reselect	重新选择
+
+# ---- 绘画与修饰 ----
+Brush	画笔
+Eraser	橡皮擦
+Clone Stamp	仿制图章
+Pattern Stamp	图案图章
+Spot Healing Brush	污点修复画笔
+Healing Brush	修复画笔
+Patch	修补
+Red Eye	红眼
+Liquify	液化
+Blur	模糊
+Sharpen	锐化
+Smudge	涂抹
+Dodge	减淡
+Burn	加深
+Sponge	海绵
+Gradient	渐变
+Paint Bucket	油漆桶
+Foreground	前景色
+Background Color	背景色
+Swatch	色板
+Palette	调板
+Eyedropper	吸管
+Color Picker	拾色器
+Hardness	硬度
+Spacing	间距
+Flow	流量
+Size	大小
+
+# ---- 调整 ----
+Adjustment	调整
+Adjustment Layer	调整图层
+Levels	色阶
+Curves	曲线
+Exposure	曝光度
+Vibrance	自然饱和度
+Color Balance	色彩平衡
+Black & White	黑白
+Photo Filter	照片滤镜
+Channel Mixer	通道混合器
+Color Lookup	颜色查找
+Invert	反相
+Posterize	色调分离
+Threshold	阈值
+Gradient Map	渐变映射
+Selective Color	可选颜色
+Shadows	阴影
+Midtones	中间调
+Highlights	高光
+Histogram	直方图
+Input	输入
+Output	输出
+
+# ---- 变换与画布 ----
+Transform	变换
+Free Transform	自由变换
+Scale	缩放
+Rotate	旋转
+Skew	斜切
+Distort	扭曲
+Perspective	透视
+Warp	变形
+Crop	裁剪
+Trim	裁切
+Canvas Size	画布大小
+Image Size	图像大小
+Resolution	分辨率
+Pixels	像素
+Percent	百分比
+Inches	英寸
+Centimeters	厘米
+Millimeters	毫米
+DPI	DPI
+Width	宽度
+Height	高度
+Anchor	定位
+Center	居中
+
+# ---- 文字 ----
+Type	文字
+Type Tool	文字工具
+Font	字体
+Font Size	字号
+Leading	行距
+Kerning	字距调整
+Tracking	字偶间距
+Baseline Shift	基线偏移
+Horizontal Scale	水平缩放
+Vertical Scale	垂直缩放
+Faux Bold	仿粗体
+Faux Italic	仿斜体
+Alignment	对齐
+Justification	对齐方式
+Auto Leading	自动行距
+Color Fill	颜色填充
+Character	字符
+Paragraph	段落
+
+# ---- 界面 ----
+Tool	工具
+Tools	工具
+Inspector	属性面板
+Panel	面板
+Tab	标签页
+Untitled	未命名
+Canvas	画布
+Canvas Only	仅画布
+Full Screen	全屏
+Zoom In	放大
+Zoom Out	缩小
+Fit on Screen	适合屏幕
+Actual Pixels	实际像素
+Rulers	标尺
+Grid	网格
+Guides	参考线
+Snap	对齐
+Preview	预览
+Settings	设置
+Preferences	首选项
+Reset	重置
+Apply	应用
+Cancel	取消
+OK	确定
+Done	完成
+Close	关闭
+Save	存储
+Save As	存储为
+Open	打开
+Export	导出
+Import	导入
+Quick Export	快速导出
+Revert	恢复
+Undo	撤销
+Redo	重做
+Cut	剪切
+Copy	拷贝
+Paste	粘贴
+Clear	清除
+Select	选择
+Add	添加
+Remove	移除
+Edit	编辑
+Delete	删除
+Duplicate	复制
+Rename	重命名
+Help	帮助
+About	关于
+Services	服务
+Window	窗口
+View	视图
+Filter	滤镜
+Image	图像
+Effect	效果
+Effects	效果
+Style	样式
+Blending Options	混合选项
+Command Palette	命令面板
+Check for Updates	检查更新
+Develop	显影
+Camera Raw	Camera Raw
+Color Grading	颜色分级
+Color Mixer	混色器
+Detail	细节
+Optics	光学
+Geometry	几何
+Calibration	校准
+Reds	红色
+Oranges	橙色
+Yellows	黄色
+Greens	绿色
+Aquas	浅绿色
+Blues	蓝色
+Purples	紫色
+Magentas	洋红
+Light	光照
+Transparent	透明
+White	白色
+Black	黑色
+
+# ---- 本应用特有 ----
+Alpha	Alpha
+Uncompressed	未压缩
+Selection Clipboard	选区剪贴板
+Pixel Color	像素颜色
+Top Left	左上角
+Bottom Right	右下角
+
+Purple	紫色

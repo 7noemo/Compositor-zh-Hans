@@ -1,0 +1,269 @@
+name: Sync upstream translations
+
+# 定时去看上游有没有发新 Release。
+# 有的话：拉新源码 → 打本地化补丁 → 扫描出「语言包里还没有的界面文案」→
+#         术语表优先 + LLM 兜底补齐译文 → 校验 → 提交 → 触发出包流水线。
+#
+# 判定「有没有新的菜单项」的做法说明：
+#   我们不比对菜单，而是把新版本源码里所有「人可读的字面量」全量抽出来
+#   （extract_strings.py），与现有语言包做差集。这样无论上游是新增菜单项、
+#   改了提示文案，还是把原本硬编码的字符串挪进了新的组件，都跑不掉。
+
+on:
+  schedule:
+    # 每 6 小时一次。GitHub 的定时任务在高峰期可能延迟几分钟到十几分钟。
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "即使上游版本没变，也重跑一遍扫描与翻译"
+        type: boolean
+        default: false
+      tag:
+        description: "指定上游 tag（留空 = 用最新 Release）"
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+      tag: ${{ steps.upstream.outputs.tag }}
+      version: ${{ steps.upstream.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ------------------------------------------------------------ 1. 上游版本
+      - name: 查询上游最新 Release
+        id: upstream
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          # 注意：下面几处「赋值 + 可能失败的命令」都要显式判空或包 if。
+          # set -o pipefail 之后，命令替换失败会让整个赋值语句失败，
+          # set -e 随即终止这一步 —— 日志里只剩一条 gh/curl 的原始报错，很难判断原因。
+          STATE=state/upstream.json
+          if [ ! -f "$STATE" ]; then
+            echo "❗ 找不到 ${STATE}，无法确定上游仓库与已知版本。" >&2
+            exit 1
+          fi
+          UPSTREAM_REPO="$(python3 -c "import json;print(json.load(open('$STATE'))['upstream']['repo'])")"
+          echo "upstream_repo=$UPSTREAM_REPO" >> "$GITHUB_ENV"
+
+          WANT="${INPUT_TAG:-}"
+          if [ -n "$WANT" ]; then
+            TAG="$WANT"
+            PUBLISHED="$(gh api "repos/$UPSTREAM_REPO/releases/tags/$TAG" --jq .published_at 2>/dev/null || echo '')"
+          else
+            if ! JSON="$(gh api "repos/$UPSTREAM_REPO/releases/latest")"; then
+              echo "❗ 取不到 $UPSTREAM_REPO 的最新 Release（可能它还没发过 Release，或 token 权限不足）。" >&2
+              exit 1
+            fi
+            TAG="$(printf '%s' "$JSON" | python3 -c 'import json,sys;print(json.load(sys.stdin)["tag_name"])')"
+            PUBLISHED="$(printf '%s' "$JSON" | python3 -c 'import json,sys;print(json.load(sys.stdin)["published_at"])')"
+          fi
+
+          VERSION="${TAG#v}"
+          echo "tag=$TAG"                 >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION"         >> "$GITHUB_OUTPUT"
+          echo "published=$PUBLISHED"     >> "$GITHUB_OUTPUT"
+
+          KNOWN="$(python3 -c "import json;print(json.load(open('$STATE')).get('upstream',{}).get('latest_tag',''))")"
+          if [ "$TAG" = "$KNOWN" ]; then
+            echo "needs_sync=false" >> "$GITHUB_OUTPUT"
+            echo "上游仍是最新的 ${TAG}，跳过同步。"
+          else
+            echo "needs_sync=true" >> "$GITHUB_OUTPUT"
+            echo "发现新版本：$KNOWN -> $TAG"
+          fi
+
+      # ------------------------------------------------------------ 2. 取源码 + 打补丁
+      - name: 取上游源码并打本地化补丁
+        if: steps.upstream.outputs.needs_sync == 'true' || inputs.force
+        env:
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.upstream.outputs.tag }}
+        run: |
+          set -euo pipefail
+          bash scripts/bootstrap.sh "$TAG" --repo "$REPO"
+
+      # ------------------------------------------------------------ 3. 扫出新词条
+      - name: 扫描语言包还没覆盖的界面文案
+        if: steps.upstream.outputs.needs_sync == 'true' || inputs.force
+        run: |
+          set -euo pipefail
+          python3 scripts/tools/extract_strings.py _upstream zh-Hans.lproj/Localizable.strings
+
+      # ------------------------------------------------------------ 4. 补译文
+      - name: 术语表优先 + LLM 兜底补译文
+        if: steps.upstream.outputs.needs_sync == 'true' || inputs.force
+        env:
+          # 没配 LLM_API_KEY 也能跑：术语表命中的照补，其余进 state/pending/ 等人看
+          LLM_API_KEY:  ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL || 'https://api.openai.com/v1' }}
+          LLM_MODEL:    ${{ vars.LLM_MODEL || 'gpt-4o-mini' }}
+        run: |
+          set -euo pipefail
+          python3 scripts/tools/translate_missing.py
+
+      - name: 合并译文进语言包
+        if: steps.upstream.outputs.needs_sync == 'true' || inputs.force
+        run: |
+          set -euo pipefail
+          ARGS="translations/curated.tsv"
+          if [ -s translations/auto.tsv ]; then ARGS="$ARGS translations/auto.tsv"; fi
+          python3 scripts/tools/merge_translations.py $ARGS
+
+      - name: 校验语言包
+        if: steps.upstream.outputs.needs_sync == 'true' || inputs.force
+        run: |
+          set -euo pipefail
+          python3 scripts/tools/check-strings.py
+
+      # ------------------------------------------------------------ 5. 更新状态
+      - name: 更新 state/upstream.json
+        id: state
+        if: steps.upstream.outputs.needs_sync == 'true' || inputs.force
+        env:
+          TAG: ${{ steps.upstream.outputs.tag }}
+          VERSION: ${{ steps.upstream.outputs.version }}
+          PUBLISHED: ${{ steps.upstream.outputs.published }}
+          REPO: ${{ github.repository }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import datetime, json, os
+
+          TAG       = os.environ["TAG"]
+          VERSION   = os.environ["VERSION"]
+          PUBLISHED = os.environ.get("PUBLISHED", "")
+          REPO      = os.environ["REPO"]
+          FORCE     = os.environ.get("FORCE", "false").lower() == "true"
+          today     = datetime.date.today().isoformat()
+
+          # extract_strings.py 已经把统计写成 build/stats.json，
+          # 这里只做搬运，不再重复扫源码。
+          stats = {}
+          if os.path.exists("build/stats.json"):
+              stats = json.load(open("build/stats.json", encoding="utf-8"))
+
+          p = "state/upstream.json"
+          st = json.load(open(p, encoding="utf-8"))
+
+          st["upstream"].update({
+              "latest_tag": TAG,
+              "latest_version": VERSION,
+              "published_at": PUBLISHED,
+          })
+          st["localized"].update({
+              "strings_total":      stats.get("strings_total"),
+              "extracted_ui_strings": stats.get("found"),
+              "covered":            stats.get("covered"),
+              "coverage_percent":   stats.get("coverage_percent"),
+              "todo":               stats.get("todo"),
+              "last_sync":          today,
+              "repo":               REPO,
+          })
+          note = "手动强制同步" if FORCE else "上游发新版，自动同步"
+          st.setdefault("history", []).insert(0, {
+              "tag": TAG,
+              "version": VERSION,
+              "synced_at": today,
+              "strings_total":    stats.get("strings_total"),
+              "coverage_percent": stats.get("coverage_percent"),
+              "note": note,
+          })
+          st["history"] = st["history"][:30]
+
+          with open(p, "w", encoding="utf-8") as fh:
+              json.dump(st, fh, ensure_ascii=False, indent=2)
+              fh.write("\n")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write(f"pct={stats.get('coverage_percent', '?')}\n")
+              fh.write(f"total={stats.get('strings_total', '?')}\n")
+          print(f"覆盖率 {stats.get('coverage_percent')}%  "
+                f"（{stats.get('covered')}/{stats.get('found')}），"
+                f"语言包 {stats.get('strings_total')} 条")
+          PY
+
+      # ------------------------------------------------------------ 6. 提交
+      - name: 有变化就提交
+        id: diff
+        if: steps.upstream.outputs.needs_sync == 'true' || inputs.force
+        env:
+          TAG: ${{ steps.upstream.outputs.tag }}
+          VERSION: ${{ steps.upstream.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name  "compositor-zh-bot"
+          git config user.email "actions@users.noreply.github.com"
+
+          # 报告状态：不跟踪的东西不入库
+          git status --short
+
+          if git diff --quiet && git diff --cached --quiet && \
+             [ -z "$(git ls-files --others --exclude-standard -- translations state)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "本轮没有产生改动。"
+            exit 0
+          fi
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          git add zh-Hans.lproj translations state appcast.xml
+          git commit -m "sync: 跟随上游 ${TAG}（${VERSION}）更新汉化" \
+            -m "自动同步：扫描上游 $TAG 源码 -> 术语表优先 + LLM 兜底补译 -> 校验通过。" \
+            -m "详见 state/upstream.json 与 state/pending/。" || echo "没有可提交内容。"
+          git push
+
+      # ------------------------------------------------------------ 7. 触发出包
+      - name: 触发编译打包
+        if: steps.diff.outputs.changed == 'true' || steps.upstream.outputs.needs_sync == 'true' || inputs.force
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.upstream.outputs.tag }}
+        run: |
+          set -euo pipefail
+          echo "通知 build-release 开始出包：$TAG"
+          gh workflow run build-release.yml \
+            --ref "${GITHUB_REF_NAME}" \
+            -f tag="$TAG" \
+            || echo "⚠️ 触发失败（可能是 token 权限不足），请手动运行 build-release。"
+
+      - name: 汇总
+        if: always()
+        run: |
+          {
+            echo "## 上游同步结果"
+            echo ""
+            echo "| 项 | 值 |"
+            echo "| --- | --- |"
+            echo "| 上游版本 | ${{ steps.upstream.outputs.tag }} |"
+            echo "| 需要同步 | ${{ steps.upstream.outputs.needs_sync }} |"
+            echo "| 语言包覆盖率 | ${{ steps.state.outputs.pct }}% |"
+            echo "| 有改动 | ${{ steps.diff.outputs.changed }} |"
+            echo ""
+            echo "待人工处理的词条在 \`state/pending/untranslated.tsv\`。"
+          } >> "$GITHUB_STEP_SUMMARY"

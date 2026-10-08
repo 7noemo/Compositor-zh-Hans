@@ -1,0 +1,17 @@
+# 默认统一用 LF：shell 脚本在 macOS/Linux 上都要求 LF，
+# 若被编辑器存成 CRLF，双击 .command 会直接报 "bad interpreter"。
+* text=auto eol=lf
+
+*.sh        text eol=lf
+*.command   text eol=lf
+*.py        text eol=lf
+*.yml       text eol=lf
+*.strings   text eol=lf
+
+# 语言包改动会非常大，diff 里默认折叠掉，方便看代码改动
+zh-Hans.lproj/Localizable.strings  linguist-generated=true
+translations/auto.tsv              linguist-generated=true
+build/                             linguist-vendored
+
+# Release 里上传的是二进制，GitHub 语言统计别把它算进仓库
+*.dmg      binary

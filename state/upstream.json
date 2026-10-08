@@ -1,0 +1,33 @@
+{
+  "_comment": "由 .github/workflows/sync-upstream.yml 自动维护。手工编辑也没问题，下一轮同步会覆盖这几个统计字段。",
+  "upstream": {
+    "repo": "robbietilton/Compositor",
+    "latest_tag": "v1.4.6",
+    "latest_version": "1.4.6",
+    "published_at": "2026-10-08T04:16:12Z",
+    "asset": "Compositor.dmg"
+  },
+  "localized": {
+    "repo": "__REPO__",
+    "strings_total": 1312,
+    "extracted_ui_strings": 1152,
+    "covered": 1070,
+    "todo": 82,
+    "coverage_percent": 92.9,
+    "patched_render_sites": 431,
+    "interp_rules": 92,
+    "last_sync": "2026-10-08",
+    "last_build": null,
+    "release_tag": null
+  },
+  "history": [
+    {
+      "tag": "v1.4.6",
+      "version": "1.4.6",
+      "synced_at": "2026-10-08",
+      "strings_total": 1312,
+      "coverage_percent": 92.9,
+      "note": "建仓：三方合并（社区语言包 793 + String Catalog 408 + 1.4.6 手工补 58），新增本地化补丁覆盖 B 类透传文案与插值消息。"
+    }
+  ]
+}

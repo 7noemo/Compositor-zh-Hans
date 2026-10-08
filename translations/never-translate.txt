@@ -1,0 +1,91 @@
+# 永不翻译清单
+#
+# extract_strings.py 是「宁可多报不可漏报」的扫描器，所以清单里总会混进一些
+# 根本不是给人看的字符串。这里把已经确认过的噪音钉死，避免它们：
+#   * 被术语表/LLM 译错后写进语言包
+#   * 每轮同步都在 state/pending/ 里刷屏
+#
+# 每行一个 key（大小写、引号、破折号差异会被忽略），# 开头是注释。
+# 如果将来某个词真的需要翻译了，把它从这里删掉即可。
+
+# ---- PSD / TIFF 格式内部键（写进 .psd 的 4 字符标记与字典键）----
+EngineData
+EngineDict
+ResourceDict
+StyleSheet
+StyleSheetData
+StyleRun
+RunArray
+ParagraphRun
+ParagraphSheet
+FontSet
+FontSize
+FillColor
+HorizontalScale
+VerticalScale
+AutoLeading
+Justification
+FauxBold
+FauxItalic
+TySh
+SoCo
+SoLE
+SoLd
+PxSD
+VlLs
+UntF
+GlbC
+GlbO
+Bl  = 
+Grn 
+Rd  
+Txt 
+div 
+lum 
+mul 
+obj 
+sat 
+hue 
+EV
+Editor
+Values
+
+# ---- 命令面板要跳过的系统菜单名（是 Swift 里做字符串比较用的，不进 UI）----
+Command Palette…
+
+# ---- 单位与通道名（中文版同样保留英文）----
+px
+sRGB
+RGBA
+RGB
+DPI
+Bayer 2 × 2
+Bayer 4 × 4
+Bayer 8 × 8
+Floyd–Steinberg
+Helvetica
+
+# ---- 苹果设备型号（商品名，不翻）----
+MacBook Pro 14"
+MacBook Pro 16"
+Studio Display
+iPhone 18 Pro
+iPhone 18 Pro Max
+
+# ---- 其它运行期标识 ----
+CompositorCPUCanvas
+QuickLook
+init(coder:) has not been implemented
+
+# ---- extract 的切分残留（插值被我们从中间切开留下的碎片，不是完整文案）----
+color
+copy
+effect
+by 10
+, with:
+Return
+Top 
+R —   G —   B —
+Tool › 
+Select 
+Compositor

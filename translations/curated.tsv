@@ -1,0 +1,183 @@
+# Compositor 简体中文 — 人工校对译文
+# 格式：key <TAB> 译文   （# 开头与空行忽略）
+#
+# 这一批是「外挂语言包覆盖不到、必须靠本地化补丁才生效」的词条：
+#   A 组：补丁引入的 LF() 格式串（含占位符，占位符必须与 key 一一对应）
+#   B 组：组件调用点传入的文案（补丁后开始走查表）
+#   C 组：枚举显示值（rawValue 直接进 UI）
+#
+# 术语遵循 Adobe Photoshop 简体中文版习惯。
+
+# ===== A 组：LF() 格式串 =====
+Undo %@	撤销 %@
+Redo %@	重做 %@
+Hide %@	隐藏 %@
+Show %@	显示 %@
+Hide %@ in the preview	在预览中隐藏 %@
+Show %@ in the preview	在预览中显示 %@
+%@. Double-click to reset.	%@。双击可重置。
+Result: %lld × %lld pixels	结果：%lld × %lld 像素
+Use 1–%@ pixels per side, up to %lld megapixels, and 1–9,600 pixels/inch.	每边使用 1–%@ 像素，最高 %lld 百万像素，分辨率 1–9,600 像素/英寸。
+Enter whole numbers from 1 to %@ pixels.	请输入 1 到 %@ 之间的整数像素值。
+Enter a size up to %@ pixels at this DPI.	在此 DPI 下输入最大 %@ 像素的尺寸。
+Enter a whole number from 1 to %@ px.	请输入 1 到 %@ 之间的整数像素值。
+Final dimensions must be 1–%@ pixels per side.	最终尺寸每边须为 1–%@ 像素。
+Opacity digit %lld (type two for exact %)	不透明度数字 %lld（连按两次输入精确百分比）
+Nudge %@ 1 px	将 %@ 微调 1 像素
+Nudge %@ 10 px	将 %@ 微调 10 像素
+Move selected pixels %@ 1 px	将所选像素 %@ 移动 1 像素
+Move selected pixels %@ 10 px	将所选像素 %@ 移动 10 像素
+%@ is reserved by macOS.	%@ 已被 macOS 占用。
+%@ is assigned to both %@ and %@.	%@ 同时被分配给 %@ 和 %@。
+Image export supports canvases up to %lld megapixels and %@ pixels per side.	图像导出支持最大 %lld 百万像素、每边 %@ 像素的画布。
+This import exceeds the current %lld-megapixel document budget or %@-pixel side limit.	此导入超出当前 %lld 百万像素的文档预算，或 %@ 像素的边长限制。
+This project exceeds the supported canvas, layer, file-size, or %lld-megapixel document limit.	此项目超出支持的最大画布、图层、文件大小，或 %lld 百万像素的文档限制。
+The copied layers exceed this project’s %lld-megapixel limit.	复制的图层超出此项目 %lld 百万像素的限制。
+That shape is too large. A shape can cover up to %lld megapixels.	该形状过大。单个形状最大可覆盖 %lld 百万像素。
+That text box exceeds the %@-pixel or %lld-megapixel limit.	该文本框超出 %@ 像素或 %lld 百万像素的限制。
+Folder blend mode “%@” isn’t supported. The folder will be pass-through.	不支持组的混合模式“%@”，该组将按穿透处理。
+Blend mode “%@” isn’t supported and will be applied as Normal.	不支持混合模式“%@”，将按“正常”应用。
+The font “%@” isn’t installed, so the text was drawn with the system font.	未安装字体“%@”，因此文字改用系统字体绘制。
+Edit %@ Adjustment	编辑%@调整
+New %@ Adjustment	新建%@调整
+“%@” is a folder, which has no pixels of its own. Paint on a layer inside it, or on the folder’s mask.	“%@”是一个组，本身没有像素。请在其内部的图层上绘制，或在组的蒙版上绘制。
+“%@” is hidden, or inside a hidden folder. Show it to paint on it.	“%@”已隐藏，或位于隐藏的组内。请先显示它再绘制。
+“%@” is an adjustment layer, with no pixels to paint. Paint on its mask instead.	“%@”是调整图层，没有可绘制的像素。请在它的蒙版上绘制。
+Open “%@”?	打开“%@”？
+Save changes to %@?	要保存对 %@ 的更改吗？
+“%@” was changed on disk.	“%@”已在磁盘上被更改。
+Link mask: %@	链接蒙版：%@
+Unlink mask: %@	取消链接蒙版：%@
+Clipped to %@	已裁剪至 %@
+Clipping mask based on %@. Option-click the bottom of its row to release.	基于 %@ 的剪贴蒙版。按住 Option 点击其行底部可释放。
+%lld more tabs	还有 %lld 个标签页
+Add to %@	添加到 %@
+%@ canvas	%@画布
+Current: %lld × %lld pixels	当前：%lld × %lld 像素
+New: %lld × %lld pixels · %@ uncompressed	新建：%lld × %lld 像素 · 未压缩 %@
+In %lld   Out %lld	输入 %lld   输出 %lld
+Input %lld · Output %lld	输入 %lld · 输出 %lld
+%lld × %lld px	%lld × %lld 像素
+%@ × %@ px · sRGB	%@ × %@ 像素 · sRGB
+%lld degrees	%lld 度
+%@ uncompressed RGBA canvas	未压缩 RGBA 画布 %@
+Close %@	关闭 %@
+Develop “%@”	显影“%@”
+Select mask: %@	选择蒙版：%@
+Tool › %@	工具 › %@
+Color Picker (%@)	拾色器（%@）
+Color Picker (%@ Color)	拾色器（%@色）
+Original %@ histogram	原始%@直方图
+ · %lld DPI: %lld × %lld pixels	 · %lld DPI：%lld × %lld 像素
+Edit %@.	编辑 %@。
+Click the original layer to set %@. Click the eyedropper again to stop.	点击原始图层以设置 %@。再次点击吸管可停止。
+A subdivision every %@ pixels.	每 %@ 像素一个细分。
+Use gridlines every %lld–%@ pixels and %lld–%lld subdivisions, no more than the pixels between gridlines.	网格线间距 %lld–%@ 像素，细分数 %lld–%lld，且细分数不超过网格线之间的像素数。
+Zoom in (⌘+), now %@. At 100%% each pixel of the JPEG is one pixel of the screen, as on the canvas	放大（⌘+），当前 %@。100%% 时 JPEG 的每个像素对应屏幕上的一个像素，与画布显示一致
+Zoom out (⌘−), now %@	缩小（⌘−），当前 %@
+This project uses format version %lld. This app supports versions %lld–%lld.	此文件的格式版本为 %lld。本应用支持 %lld–%lld。
+Folder %lld	组 %lld
+Layer %lld	图层 %lld
+%@ the selection by this many pixels	%@选区（按此像素数）
+Drag to draw a shape on a new layer · Shift %@ · Option from center · Shift-U or Tab for the next shape · Escape cancel · Space to pan	在新图层上拖动以绘制形状 · Shift %@ · Option 从中心 · Shift-U 或 Tab 切换下一个形状 · Escape 取消 · 空格平移
+
+# ===== B 组：组件调用点文案 =====
+1 more tab	还有 1 个标签页
+Canvas Only: full screen on black, without panels	仅画布：在黑色背景上全屏显示，隐藏所有面板
+Click to select; double-click to edit; Option-drag to copy 	点击选择；双击编辑；按住 Option 拖动可复制 
+Command Palette	命令面板
+Move / Transform	移动 / 变换
+Spot Healing Brush	污点修复画笔
+Layer › Add Layer Mask	图层 › 添加图层蒙版
+Layer › Add Layer Mask (Hide All)	图层 › 添加图层蒙版（隐藏全部）
+Layer › Add Layer Mask Hiding Selection	图层 › 添加隐藏选区的图层蒙版
+Layer › Add Layer Mask from Selection	图层 › 从选区添加图层蒙版
+Resolution: 72 for screens, 300 for print. Click to switch.	分辨率：屏幕用 72，印刷用 300。点击可切换。
+Start see-through, or with a white or black Background layer. Click to switch.	以透明开始，或使用白色 / 黑色背景图层。点击可切换。
+Units: pixels, inches, centimeters or millimeters. Click to switch.	单位：像素、英寸、厘米或毫米。点击可切换。
+Untitled %lld	未命名 %lld
+Bayer 2 × 2	Bayer 2 × 2
+Bayer 4 × 4	Bayer 4 × 4
+Bayer 8 × 8	Bayer 8 × 8
+Floyd–Steinberg	Floyd–Steinberg
+
+# ---- 套索小工具（modifyControl 的按钮 / 输入框 / tooltip）----
+Expand	扩展
+Contract	收缩
+
+# ---- 命令面板里的工具项 ----
+# 这些是 CommandPaletteEntry 的 title，经 Text(L(entry.title)) 查表；
+# 注意命令面板的「搜索」仍按英文原文匹配（entry.title 同时用于检索），
+# 因此输入中文可能搜不到工具，输入英文一定可以。
+Tool › Move / Transform	工具 › 移动 / 变换
+Tool › Rectangular Marquee	工具 › 矩形选框
+Tool › Elliptical Marquee	工具 › 椭圆选框
+Tool › Lasso	工具 › 套索
+Tool › Polygonal Lasso	工具 › 多边形套索
+Tool › Magic Wand	工具 › 魔棒
+Tool › Object Selection	工具 › 对象选择
+Tool › Crop	工具 › 裁剪
+Tool › Brush	工具 › 画笔
+Tool › Eraser	工具 › 橡皮擦
+Tool › Spot Healing Brush	工具 › 污点修复画笔
+Tool › Clone Stamp	工具 › 仿制图章
+Tool › Liquify	工具 › 液化
+Tool › Blur	工具 › 模糊
+Tool › Smudge	工具 › 涂抹
+Tool › Gradient	工具 › 渐变
+Tool › Rectangle	工具 › 矩形
+Tool › Ellipse	工具 › 椭圆
+Tool › Line	工具 › 直线
+Tool › Type	工具 › 文字
+Tool › Eyedropper	工具 › 吸管
+Tool › Hand	工具 › 抓手
+Tool › Zoom	工具 › 缩放
+
+# ---- 撤销 / 重做菜单里的操作名（原名由字符串拼接而成，补丁已改为格式串）----
+Add %@	添加%@
+Delete %@	删除%@
+Edit %@	编辑%@
+Copy %@	拷贝%@
+Remove %@	移除%@
+Cancel %@	取消%@
+Align %@	对齐%@
+Click to select; double-click to edit; Option-drag to copy %@	点击选择；双击编辑；按住 Option 拖动可复制 %@
+
+# ---- 菜单项（本地化位置里的裸字面量）----
+Cancel	取消
+Show	显示
+Hide	隐藏
+Delete Layer	删除图层
+Delete Layer Mask	删除图层蒙版
+Delete Layers	删除多个图层
+
+# ===== C 组：枚举显示值 =====
+Pixels	像素
+Percent	百分比
+Inches	英寸
+Centimeters	厘米
+Millimeters	毫米
+Transparent	透明
+White	白色
+Black	黑色
+Light	光照
+Color	颜色
+Color Grading	颜色分级
+Effects	效果
+Curve	曲线
+Color Mixer	混色器
+Detail	细节
+Optics	光学
+Geometry	几何
+Calibration	校准
+Reds	红色
+Oranges	橙色
+Yellows	黄色
+Greens	绿色
+Aquas	浅绿色
+Blues	蓝色
+Purples	紫色
+Magentas	洋红
+Transparent Pixels	透明像素
+Top Left Pixel Color	左上角像素颜色
+Bottom Right Pixel Color	右下角像素颜色

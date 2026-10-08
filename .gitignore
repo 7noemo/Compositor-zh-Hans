@@ -1,0 +1,28 @@
+# 运行时拉取的上游源码（bootstrap.sh 会重新克隆，不入库）
+_upstream/
+
+# 构建产物
+build/
+dist/
+DerivedData/
+*.xcarchive/
+*.dmg
+*.zip
+
+# 万一有人在仓库根目录直接跑了 xcodebuild
+*.xcodeproj/
+AppIcon*/
+
+# 系统 / 编辑器
+.DS_Store
+._*
+__pycache__/
+*.pyc
+.venv/
+.idea/
+.vscode/
+
+# 本地密钥（LLM 调用凭据绝不入库）
+.env
+.env.local
+secrets.json
