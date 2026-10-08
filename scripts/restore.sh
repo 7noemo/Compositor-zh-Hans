@@ -71,6 +71,45 @@ trap cleanup EXIT
 plist_of() { printf '%s' "$1/Contents/Info.plist"; }
 pl_read()  { /usr/libexec/PlistBuddy -c "Print :$2" "$(plist_of "$1")" 2>/dev/null || true; }
 
+# ---------------------------------------------------------------- 遗留守护
+# 早期那条「自动恢复汉化」路线（已废弃）会装一个 LaunchAgent：
+#   ~/Library/LaunchAgents/com.wonderassembly.compositor.hanhua.plist
+# 它的 WatchPaths 同时盯着 /Applications/Compositor.app 和 /Applications，
+# 于是**任何**往 /Applications 里放东西的动作都会唤醒它，它随即把旧版
+# 语言包（1209 条，比现在少一大截）重新注入 app 并重签。后果：
+#   * 还原官方版之后几秒，界面自己变回中文 —— 而且是「部分汉化」的旧版
+#   * 重新下载官方版装进去，装完立刻又变成半汉化，看起来像「装不上官方版」
+# 所以必须先把它拆掉，否则后面所有还原都是白做。
+LEGACY_LABEL="com.wonderassembly.compositor.hanhua"
+LEGACY_PLIST="$HOME/Library/LaunchAgents/$LEGACY_LABEL.plist"
+LEGACY_PAYLOAD="$HOME/Library/Application Support/CompositorHanhua"
+
+legacy_present() {
+  [ -f "$LEGACY_PLIST" ] && return 0
+  [ -d "$LEGACY_PAYLOAD" ] && return 0
+  launchctl print "gui/$(id -u)/$LEGACY_LABEL" >/dev/null 2>&1 && return 0
+  return 1
+}
+
+remove_legacy_watchdog() {
+  legacy_present || return 0
+  say "==> 发现历史遗留的「自动汉化守护」，先拆掉它"
+  say "    不拆的话，还原官方版几秒后它会把中文再打回去。"
+  launchctl bootout "gui/$(id -u)/$LEGACY_LABEL" >/dev/null 2>&1 || true
+  VAULT="$SUPPORT_DIR/legacy-removed/$(date +%Y%m%d-%H%M%S)"
+  mkdir -p "$VAULT"
+  if [ -f "$LEGACY_PLIST" ]; then
+    mv "$LEGACY_PLIST" "$VAULT/" 2>/dev/null && say "    → 已移走 ${LEGACY_LABEL}.plist（卸载开机自启）"
+  fi
+  if [ -d "$LEGACY_PAYLOAD" ]; then
+    mv "$LEGACY_PAYLOAD" "$VAULT/" 2>/dev/null && say "    → 已移走旧版语言包与补丁脚本"
+  fi
+  [ -f "$HOME/Library/Logs/compositor-hanhua.log" ] && \
+    cp "$HOME/Library/Logs/compositor-hanhua.log" "$VAULT/" 2>/dev/null
+  say "    东西都放在 ${VAULT}，想反悔可以搬回去。"
+  return 0
+}
+
 say "==================================================="
 say " Compositor — 还原官方版"
 say "==================================================="
@@ -128,6 +167,11 @@ else
   warn "注意：没有原始备份，所以只能重做 ad-hoc 签名，签不回原厂签名。"
   warn "      想要完全干净的官方版，请改用： bash scripts/restore.sh --reinstall"
 fi
+if legacy_present; then
+  say ""
+  warn "⚠️ 检测到历史遗留的「自动汉化守护」（旧方案装的），会一起拆掉。"
+  warn "   它就是「还原后又自动变回中文」的原因。"
+fi
 say ""
 
 if [ "$ASSUME_YES" -ne 1 ]; then
@@ -135,6 +179,11 @@ if [ "$ASSUME_YES" -ne 1 ]; then
   read -r ans || ans=""
   case "$ans" in y|Y|yes|YES) ;; *) say "已取消，未做任何改动。"; exit 0 ;; esac
 fi
+
+# ---------------------------------------------------------------- 3b. 拆遗留守护
+# 必须在动 app 之前完成：否则守护会在 /Applications 变化时立刻回写中文。
+remove_legacy_watchdog
+say ""
 
 # ---------------------------------------------------------------- 3. 写权限预检
 if [ "$MODE" != "reinstall" ] || [ ! -d "$APP_PATH" ]; then
@@ -278,6 +327,12 @@ if [ "$DEVR" = "en" ]; then
   say "    ✅ 开发地区 = en"
 else
   warn "    ⚠️ 开发地区 = ${DEVR}（预期 en，手动装过其他语言包吗？）"
+fi
+# 只看 plist 文件在不在 —— 只要它还在 LaunchAgents 里，下次登录就会复活。
+if [ -f "$LEGACY_PLIST" ]; then
+  warn "    ⚠️ 自动汉化守护仍在，请删掉 ${LEGACY_PLIST}，否则会再次自动汉化"; OK=0
+else
+  say "    ✅ 无自动汉化守护（不会再被偷偷改回中文）"
 fi
 # 注意是 -dvv 而不是 -dv：verbose 只有到 2 才会打印 Authority 行，
 # 用 -dv 的话永远读不到签名主体，会误报成「未知」。

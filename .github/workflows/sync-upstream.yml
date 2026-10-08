@@ -13,6 +13,12 @@ name: Sync upstream translations
 #   不比对菜单本身，而是把新版本源码里所有「人可读的字面量」全量抽出来
 #   （extract_strings.py），与现有语言包做差集。这样上游无论是新增菜单项、
 #   改了提示文案，还是把硬编码字符串挪进了新组件，都跑不掉。
+#
+# 「精确核对 A 类文案的 key」那一步是最后一道闸：
+#   SwiftUI 查表用的 key 由源码写法在编译期决定（"Close \(x)" -> "Close %@"，
+#   且**永远不带序号**）。所以光有译文不够，key 必须逐字符对上。
+#   这一步不通过就说明有文案会显示英文，宁可不提交也不放过去。
+#   失败时的修法见 tools/check-coverage-gap.py 的输出。
 
 on:
   schedule:
@@ -184,6 +190,21 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/tools/check-strings.py
+
+      # 精确核对：A 类文案按 SwiftUI 运行时规则算出的 key，必须在语言包里
+      # 逐字符存在。早先用「骨架匹配」（只看占位符位置）会把格式符类型或
+      # 序号写错的条目也判成已覆盖 —— 那正是「明明有译文却还显示英文」的根因。
+      # 这里允许剩下的只有空串、纯符号这类没有实际内容的文案。
+      - name: 精确核对 A 类文案的 key
+        if: steps.upstream.outputs.needs_sync == 'true' || inputs.force
+        run: |
+          set -euo pipefail
+          # 重算一遍：上面那份 coverage.json 是**补译文之前**生成的，
+          # 补完再看才准，否则会把已经补上的缺口又报一遍。
+          python3 scripts/tools/analyze_coverage.py _upstream \
+            --pack zh-Hans.lproj/Localizable.strings \
+            --json build/coverage.json > /dev/null
+          python3 scripts/tools/check-coverage-gap.py build/coverage.json
 
       # ------------------------------------------------------------ 6. 更新状态
       - name: 更新 state/upstream.json

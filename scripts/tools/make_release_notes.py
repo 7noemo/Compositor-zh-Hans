@@ -12,6 +12,8 @@
 import argparse
 import json
 import os
+import re
+import subprocess
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -85,6 +87,12 @@ TEMPLATE = """Compositor 的**简体中文语言包**，对应上游 **{up_tag}*
 > 语言包能生效」的位置，这是本项目的真实成绩；**全量**那一行分母里混着
 > `8BIM`、`TySh` 这类 PSD 二进制标记和纯数字读数，翻不了，仅供参考。
 
+> 这个覆盖率是**精确核对**出来的，不是「差不多对上了」：工具会按 SwiftUI 的
+> 运行时规则把每条源码文案算成真实查表 key（`"Close \\(x)"` → `Close %@`，
+> `Int` 插值 → `%lld`，且**永远不带序号**），要求语言包里逐字符存在。
+> CI 里只要出现一条「有实际内容却没翻」的文案就会直接失败 ——
+> 所以「明明有译文却还显示英文」这类问题不会再悄悄溜过去。
+
 ## 已知限制（请务必看一眼）
 
 这是**外挂语言包**：不修改 app 的可执行文件，只往里面放一份
@@ -121,9 +129,25 @@ TEMPLATE = """Compositor 的**简体中文语言包**，对应上游 **{up_tag}*
 """
 
 
+def repo_from_git():
+    """CI 之外本地跑时，从 origin 地址推断 owner/repo。
+
+    不这么做的话 {repo} 是空串，生成出来的 NOTICE 链接会变成
+    https://github.com//blob/main/NOTICE —— 少一截，点不开。
+    """
+    try:
+        out = subprocess.run(["git", "remote", "get-url", "origin"],
+                             capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    url = (out.stdout or "").strip()
+    m = re.search(r"github\.com[:/]+([^/]+)/([^/\s]+?)(?:\.git)?$", url)
+    return f"{m.group(1)}/{m.group(2)}" if m else ""
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--repo", default=os.environ.get("REPO", ""))
+    ap.add_argument("--repo", default=os.environ.get("REPO", "") or repo_from_git())
     ap.add_argument("--version", default=os.environ.get("VERSION", ""))
     ap.add_argument("--zip-name", default="", help="语言包压缩包文件名")
     ap.add_argument("--state", default=os.path.join(ROOT, "state", "upstream.json"))

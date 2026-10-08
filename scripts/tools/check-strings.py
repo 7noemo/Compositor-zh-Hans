@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""校验 zh-Hans.lproj/Localizable.strings 的完整性与一致性。
+r"""校验 zh-Hans.lproj/Localizable.strings 的完整性与一致性。
 
 检查项：
   1. 语法能被 plutil 接受
@@ -9,6 +9,24 @@
   4. 英文与中文的占位符（%@ %d %ld %.2f %1$@ 等）数量与种类一致
   5. 中文里没有漏译的整句英文（常见漏译特征）
   6. 括号、省略号风格统一（… 而不是 ...）
+  7. key 里不许出现带序号的格式符 %1$@
+  8. 译文里的格式符不许「带序号与不带序号」混用
+
+第 7 条是硬规则，原因见下（也是「有些文案明明有译文却还显示英文」的根因）：
+
+    SwiftUI 的 LocalizedStringKey 在运行时**只生成不带序号**的格式符。
+    用 swiftc 反射 SwiftUI 内部 key 实测（macOS 27 / Swift 6.4）：
+
+        "Close \(s)"                    -> "Close %@"           String
+        "Current: \(w) × \(h) pixels"   -> "Current: %lld × ..."  Int
+        "\(d) px"                       -> "%lf px"              Double
+
+    所以语言包里写成 "%1$@ × %2$@ px" 的 key 永远查不到 —— 死条目。
+    序号只允许出现在**译文**里做参数重排，例如
+        "%@ of %@." = "%2$@的%1$@。"
+
+第 8 条：CFString 规定一个格式串里的占位符要么全带序号、要么全不带，
+混用是未定义行为（可能整句原样打印）。
 
 用法：
     python3 tools/check-strings.py
@@ -84,11 +102,26 @@ def main():
             continue
         if key == value and not re.fullmatch(r'[\W\d_]+', key):
             warnings.append(f"第 {lineno} 行：中英文完全相同（可能是漏译）{key!r}")
-        kp = sorted(PLACEHOLDER.findall(key))
-        vp = sorted(PLACEHOLDER.findall(value))
+        # 比占位符时**先去掉序号**：%@ 与 %1$@ 是同一个东西，
+        # 序号只是让译文能重排参数，不影响类型。要比的是类型与个数。
+        kp = sorted(re.sub(r'%\d+\$', '%', p) for p in PLACEHOLDER.findall(key))
+        vp = sorted(re.sub(r'%\d+\$', '%', p) for p in PLACEHOLDER.findall(value))
+        vp_raw = sorted(PLACEHOLDER.findall(value))
         if kp != vp:
             errors.append(
                 f"第 {lineno} 行：占位符不一致 {key!r} -> {value!r}（英文 {kp} / 中文 {vp}）"
+            )
+        # 7. key 里不许出现带序号的格式符（SwiftUI 运行时不会生成这种 key）
+        if re.search(r'%\d+\$', key):
+            errors.append(
+                f"第 {lineno} 行：key 里出现带序号的格式符 {key!r} —— SwiftUI 只生成"
+                f"不带序号的 key（%@/%lld/%lf），这条运行时永远查不到。序号只能写在译文里。"
+            )
+        # 8. 译文里不许「带序号 / 不带序号」混用（CFString 未定义行为）
+        if vp_raw and any("$" in p for p in vp_raw) and any("$" not in p for p in vp_raw):
+            errors.append(
+                f"第 {lineno} 行：译文格式符序号混用 {value!r}（{vp_raw}）—— 要么全带序号，"
+                f"要么全不带，混用是未定义行为。"
             )
         if "..." in value or "。。。" in value:
             warnings.append(f"第 {lineno} 行：省略号建议用「…」而不是「...」{key!r} -> {value!r}")

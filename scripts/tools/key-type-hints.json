@@ -1,0 +1,97 @@
+{
+  "_doc": "插值文案的真实格式符表。SwiftUI 的 LocalizedStringKey 会把插值换成格式符当 key：String->%@，Int->%lld，Double/CGFloat->%lf，且**永远不带序号**。analyze_coverage.py / verify_keys.py 优先读这里，读不到才去猜。每条都对着 v1.4.6 源码逐个核过；上游改了文案时，selfcheck.sh 会提示这里多出来/对不上。",
+  "_version": "v1.4.6",
+  "types": {
+    "Choose the \\(title.lowercased()) color": [
+      "%@"
+    ],
+    "Click the original layer to set \\(mode.rawValue.lowercased()). Click the eyedropper again to stop.": [
+      "%@"
+    ],
+    "Close \\(tab.title)": [
+      "%@"
+    ],
+    "Current: \\(document.width) × \\(document.height) pixels": [
+      "%lld",
+      "%lld"
+    ],
+    "Current: \\(draft.originalWidth) × \\(draft.originalHeight) pixels": [
+      "%lld",
+      "%lld"
+    ],
+    "Develop “\\(url.lastPathComponent)”": [
+      "%@"
+    ],
+    "Edit \\(CameraRawMixerSettings.names[index]).": [
+      "%@"
+    ],
+    "Enter a whole number from 1 to \\(maximum) px.": [
+      "%lld"
+    ],
+    "Final dimensions must be 1–\\(DocumentLimits.maxSide.formatted()) pixels per side.": [
+      "%@"
+    ],
+    "In \\(Int((point.x * 255).rounded()))   Out \\(Int((point.y * 255).rounded()))": [
+      "%lld",
+      "%lld"
+    ],
+    "Input \\(Int(points[selected].x)) · Output \\(Int(points[selected].y))": [
+      "%lld",
+      "%lld"
+    ],
+    "New: \\(Int(draft.width.rounded())) × \\(Int(draft.height.rounded())) pixels · \\(bytes(Int(draft.width.rounded()), Int(draft.height.rounded()))) uncompressed": [
+      "%lld",
+      "%lld",
+      "%@"
+    ],
+    "Original \\(settings.channel.rawValue) histogram": [
+      "%@"
+    ],
+    "Zoom in (⌘+), now \\(percent). At 100% each pixel of the JPEG is one pixel of the screen, as on the canvas": [
+      "%@"
+    ],
+    "Zoom out (⌘−), now \\(percent)": [
+      "%@"
+    ],
+    "\\(Int((options.quality * 100).rounded()))%": [
+      "%lld"
+    ],
+    "\\(Int(hsb.hue.rounded())) degrees": [
+      "%lld"
+    ],
+    "\\(Int(rect.width)) × \\(Int(rect.height)) px": [
+      "%lld",
+      "%lld"
+    ],
+    "\\(Int(wheel.hue.rounded()))°  \\(Int(wheel.saturation.rounded()))": [
+      "%lld",
+      "%lld"
+    ],
+    "\\(bytes(draft.originalWidth, draft.originalHeight)) uncompressed RGBA canvas": [
+      "%@"
+    ],
+    "\\(document.width) × \\(document.height) px": [
+      "%lld",
+      "%lld"
+    ],
+    "\\(kind.rawValue)…": [
+      "%@"
+    ],
+    "\\(mode.rawValue) color": [
+      "%@"
+    ],
+    "\\(raster.image.width.formatted()) × \\(raster.image.height.formatted()) px · sRGB": [
+      "%@",
+      "%@"
+    ],
+    "\\(session.document?.layers.count ?? 0)": [
+      "%lld"
+    ],
+    "\\(title) color": [
+      "%@"
+    ],
+    "\\(title) the selection by this many pixels": [
+      "%@"
+    ]
+  }
+}

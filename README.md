@@ -3,7 +3,7 @@
 **给 [Compositor](https://github.com/robbietilton/Compositor)（macOS 图像编辑器）用的外挂简体中文语言包。**
 双击一个脚本就能把界面变成中文，双击另一个就能完全还原。不编译、不打包、不修改任何可执行代码。
 
-[![语言包词条](https://img.shields.io/badge/语言包-1312_条-blue)](#能翻译到什么程度)
+[![语言包词条](https://img.shields.io/badge/语言包-1253_条-blue)](#能翻译到什么程度)
 [![可翻译文案覆盖](https://img.shields.io/badge/可翻译文案覆盖-99.5%25-brightgreen)](#能翻译到什么程度)
 [![上游](https://img.shields.io/badge/上游-v1.4.6-lightgrey)](https://github.com/robbietilton/Compositor/releases)
 [![许可证](https://img.shields.io/badge/许可证-MIT-green)](LICENSE)
@@ -246,13 +246,31 @@ codesign --force --sign - --deep /Applications/Compositor.app
 | **A 类**：字面量直接写在本地化位置上<br><sub>`Text("Add Layer")`、`.help("Invert")`、`Label("New", systemImage: "plus")`</sub> | **423 个文案** | ✅ **能** |
 | **B 类**：变量 / 表达式出现在同一位置<br><sub>`Text(title)`、`.help(help)`、`Text($0.rawValue)`</sub> | 205 处 / 95 种写法 | ❌ **不能** |
 
-语言包 1312 条词条，对 A 类覆盖 **421 / 423 = 99.5%**
+语言包 1253 条词条，对 A 类覆盖 **421 / 423 = 99.5%**
 （剩下两个是空串和 `·`，本来就不该翻）。
 
-> 顺便说一句：A 类里有 27 条是**靠「插值 → 格式串」命中的**。
-> 源码里写 `Text("Close \(tab.title)")`，运行时 SwiftUI 查的 key 其实是 `Close %@`，
-> 所以语言包里存的是 `"Close %@" = "关闭 %@"`。
-> 这也是为什么这个语言包的 key 长得有点怪 —— 不是乱写，是 SwiftUI 就这么查。
+这个数字是**精确核对**出来的，不是「差不多对上了」：工具会把每条源码文案按
+SwiftUI 的运行时规则算成真实 key（`"Close \(x)"` → `Close %@`），
+要求语言包里逐字符存在。CI 里 `scripts/tools/check-coverage-gap.py` 会在
+缺口里出现任何一条**带实际内容**的文案时直接失败，不让它悄悄溜过去。
+
+> **关于插值文案（27 条，也是最容易出错的一类）**
+>
+> 源码里写 `Text("Close \(tab.title)")`，运行时 SwiftUI 查的 key **不是**
+> 那串源码，而是把插值换成格式符后的 `Close %@`。所以语言包里存的是
+> `"Close %@" = "关闭 %@"` —— key 长得怪不是乱写，是 SwiftUI 就这么查。
+>
+> 两条实测规则（用 `swiftc` 反射 SwiftUI 内部的 key 得到，见
+> `zh-Hans.lproj/Localizable.strings` 文件头）：
+>
+> 1. **格式符只由类型决定**：`String` → `%@`，`Int` → `%lld`，`Double` → `%lf`。
+> 2. **永远不带序号** —— 不会有 `%1$@ × %2$@` 这种 key。
+>
+> 第 2 条踩过坑：语言包里曾有一批从别处抄来的 `"%1$@ × %2$@ px"` 形式的 key，
+> 译文写得好好的，**运行时却永远查不到**，因为 SwiftUI 根本生成不出带序号的 key。
+> 这类「死条目」已全部改掉；序号现在只允许出现在**译文**里，用来重排参数
+> （`"%@ of %@." = "%2$@的%1$@。"`）。规则由 `check-strings.py` 第 7 条和
+> `selfcheck.sh` 第 4 项把守。
 
 ### 为什么有些地方还是英文
 
@@ -276,13 +294,41 @@ Text(verbatim: name) // 显式声明「不要翻译」
 不在「外挂语言包」的能力范围内。
 
 **实际观感**：绝大多数界面（菜单、面板标题、工具栏提示、对话框、设置）都是中文。
-仍有英文残留的地方主要是：
+仍有英文残留的地方主要是这几块，**全是 B 类，不是漏翻**：
 
-- 部分工具面板里的**分组标题**（如 Camera Raw 面板的小节名）
-- 一部分**鼠标悬停提示**
-- 命令面板里部分条目的**名字**
+- **工具选项栏的分段按钮**：`Rectangle / Ellipse / Line`、`Paint / Erase`、
+  `Liquify / Blur / Smudge`、`Content-Aware / Create Texture / Proximity Match`、
+  `Freehand / Polygonal`、`Wand / Object`、`New / Add / Subtract`、`Linear / Radial`、
+  取样下拉的 `High quality`…… 源码全是
+  `ForEach(...) { Text($0.rawValue) }`（B 类写法里出现最多的 `×33 $0.rawValue` 就是它）
+- **图层面板右侧的两个下拉**：混合模式（`Normal / Multiply / Color Burn / …`）和
+  新建调整图层（`Hue/Saturation / Curves / Gaussian Blur / …`）。
+  混合模式那一份还是 AppKit 的 `NSPopUpButton.addItem(withTitle: mode.rawValue)`，
+  选中时还要拿标题原文反解析回枚举 —— 更不可能走查表
+- **菜单栏「图像 / 滤镜」里的一部分条目**：`Black & White…`、`Color Balance…`、
+  `Exposure…`、`Gradient Map…`、`Grain…` 和整个「滤镜」菜单。源码写的是
+  `Button("\(kind.rawValue)…")` —— 这是插值字面量，SwiftUI 查的 key 是 `%@…`，
+  查到了也只会把英文 rawValue 填进去。所以同一个「图像」菜单里
+  `曲线… / 色阶… / 色相/饱和度… / 反相` 是中文（字面量写法），其余是英文（rawValue 写法）
+- 选项栏上的 `Expand` / `Contract`（按钮标题来自函数参数 `Button(title)`）
+- 命令面板（⇧⌘P）里部分条目的名字
 
-如果你在这些地方看到英文，那不是漏翻，是翻不了。介意的话……只能等上游把文案挪到字面量位置。
+<details>
+<summary>这几处为什么会这样（源码位置）</summary>
+
+| 界面位置 | 源码 | 为什么翻不了 |
+| --- | --- | --- |
+| 选项栏分段按钮 | `Compositor/UI/ShapeControls.swift` 等：`ForEach(...) { Text($0.rawValue) }` | 枚举 rawValue 是 `String` 变量，走 `Text(String)` 原样渲染 |
+| 混合模式菜单 | `Compositor/UI/BlendModePicker.swift`：`button.addItem(withTitle: mode.rawValue)` | AppKit `NSMenuItem.title` 不查 .strings，且 `LayerBlendMode(rawValue: $0.title)` 靠标题反解析 |
+| 调整图层菜单 | `Compositor/Document/LayerAdjustment.swift`：`case curves = "Curves"` + `Text(kind.rawValue)` | 同上，rawValue 直传；且枚举值还要编码进文档文件，动了会坏兼容性 |
+| 图像/滤镜菜单条目 | `Compositor/CompositorApp.swift`：`Button("\(kind.rawValue)…")` | 查表 key 是 `%@…`，插进去的内容仍是英文 rawValue |
+| Expand/Contract 按钮 | `Compositor/UI/LassoControls.swift`：`modifyControl("Expand", …)` → `Button(title)` | `title` 是 `String` 参数，`Button(String)` 不查表 |
+
+这些枚举的 rawValue 同时还是**文档格式的编码值**（`Codable`），就算改源码也得保持
+rawValue 不变、另配 displayName —— 这也是外挂方案碰都不去碰它们的原因。
+</details>
+
+如果你在上面这些地方看到英文，那不是漏翻，是翻不了。介意的话……只能等上游把文案挪到字面量位置。
 
 ### 其他已知限制
 
@@ -370,6 +416,79 @@ codesign --force --sign - --deep /Applications/Compositor.app
    ```bash
    bash scripts/restore.sh && bash scripts/install.sh
    ```
+</details>
+
+<details>
+<summary><b>还原官方版之后，界面过几秒自己变回中文 / 新装官方版也是「部分汉化」</b></summary>
+
+这是**旧方案的自动汉化守护**在作怪，不是本语言包的问题。
+
+如果你以前用过别的注入式汉化包（比如 `skyecx/compositor-zh-hans` 的
+`安装自动恢复.command`），它会往 `~/Library/LaunchAgents/` 里塞一个 LaunchAgent：
+`com.wonderassembly.compositor.hanhua.plist`。它的 `WatchPaths` 同时盯着
+`/Applications/Compositor.app` **和 `/Applications` 目录本身** —— 也就是说，
+你往 `/Applications` 里放**任何**东西都会被唤醒，它随即把那份旧语言包重新注入并重签。
+
+症状因此很有迷惑性：
+
+* 还原官方版 → 几秒后界面自己变回中文，像是还原没生效
+* 重新下载官方版装进去 → 装完就是半汉化的样子，像是「装不上官方版」
+* 它注入的是**旧版**语言包（1209 条，比现在少 100 多条），所以成品是「部分汉化」
+
+本仓库的 `install.sh` / `restore.sh` 现在会**先把它拆掉**
+（移进 `~/Library/Application Support/Compositor-zh-Hans/legacy-removed/`，随时可搬回来）。
+想手动处理：
+
+```bash
+launchctl bootout "gui/$UID/com.wonderassembly.compositor.hanhua" 2>/dev/null
+mv ~/Library/LaunchAgents/com.wonderassembly.compositor.hanhua.plist ~/.Trash/
+mv ~/Library/Application\ Support/CompositorHanhua ~/.Trash/
+```
+
+拆完再 `bash scripts/restore.sh --reinstall`，官方版就能装住了。
+</details>
+
+<details>
+<summary><b>工具选项栏的 Rectangle/Ellipse、混合模式的 Normal/Multiply、部分菜单条目还是英文</b></summary>
+
+这些**不是漏翻，是外挂语言包翻不了的那一类**（B 类，约 205 处）。
+上面「能翻译到什么程度」一节有完整清单和源码位置。要点：SwiftUI 只对
+**编译期写死的字面量**查表；枚举的 `rawValue`、函数参数传进来的标题都是
+运行时变量，走原样渲染，永远不会查语言包。
+</details>
+
+<details>
+<summary><b>语言包里明明有这个词条的译文，界面却还是英文，怎么回事？</b></summary>
+
+那多半是 **key 没对上**，而不是没翻 —— 这类问题已经查清并修掉了。
+
+SwiftUI 查表用的是**运行时算出来的 key**，不是源码里那串字面量：
+
+| 源码写法 | 运行时的 key |
+| --- | --- |
+| `Text("Add Layer")` | `Add Layer` |
+| `Text("Close \(tab.title)")` | `Close %@` |
+| `Text("Current: \(w) × \(h) pixels")` | `Current: %lld × %lld pixels` |
+
+于是有两种很隐蔽的「有译文但显示英文」：
+
+1. **格式符类型写错** —— 源码插的是 `Int`，key 是 `%lld`，语言包却写成了
+   `%@`。字符串看着几乎一样，运行时就是查不到。
+2. **key 里带了序号** —— 写成 `"%1$@ × %2$@ px"`。SwiftUI **永远不会**
+   生成带序号的 key，这种条目是死条目，译文再对也没用。
+
+以前算覆盖率用的是「骨架匹配」（只看占位符出现在第几个位置），这两类错误
+都会被算成「已覆盖」，所以一直没暴露。现在改成**精确核对**：
+
+- 工具按上表规则把每条源码文案算成真实 key，要求语言包里逐字符存在
+- `check-strings.py` 直接禁止 key 里出现 `%1$@`（序号只能写在译文里，
+  用来重排参数，例如 `"%@ of %@." = "%2$@的%1$@。"`）
+- 27 条插值文案的真实格式符登记在 `scripts/tools/key-type-hints.json`，
+  不靠猜
+- CI 与自检都会在出现「带实际内容的缺口」时直接失败
+
+所以如果你现在还能看到某个词条有译文却不生效，**那就是个新 bug**，
+欢迎带着截图提 issue。
 </details>
 
 <details>
@@ -467,7 +586,7 @@ codesign --force --sign - --deep /Applications/Compositor.app
 ```
 Compositor-zh-Hans/
 ├── zh-Hans.lproj/
-│   └── Localizable.strings          语言包本体（唯一的核心资产，1312 条）
+│   └── Localizable.strings          语言包本体（唯一的核心资产，1253 条）
 ├── 一键安装语言包.command             面向使用者的双击入口（薄壳）
 │                                     └ Release 附件里叫 install-zh-Hans.command
 ├── 一键还原官方版.command             同上
@@ -482,10 +601,12 @@ Compositor-zh-Hans/
 │   ├── selfcheck.sh                 提交前一键自检（10 项）
 │   └── tools/
 │       ├── extract_strings.py       全量扫描界面文案 + 与语言包做差集
-│       ├── analyze_coverage.py      统计「外挂能翻多少」的权威口径（A/B 类）
+│       ├── analyze_coverage.py      统计「外挂能翻多少」的权威口径（A/B 类，精确匹配）
+│       ├── check-coverage-gap.py    缺口门禁：有带实际内容的文案没翻就退出码 1
+│       ├── key-type-hints.json      27 条插值文案的真实格式符表（%@/%lld/%lf）
 │       ├── translate_missing.py     术语表优先 + LLM 兜底
 │       ├── merge_translations.py    把译文合并进语言包
-│       ├── check-strings.py         校验格式 / 重复 key / 占位符一致性
+│       ├── check-strings.py         校验格式 / 重复 key / 占位符一致性 / key 禁带序号
 │       ├── update_state.py          写回 state/upstream.json
 │       ├── make_release_notes.py    生成 Release 说明
 │       └── lint-shell.py            shell 雷区检查（见下方「踩过的坑」）
@@ -509,10 +630,13 @@ Compositor-zh-Hans/
 # 拉一份上游源码（只为扫文案，不编译）
 bash scripts/fetch-upstream.sh v1.4.6
 
-# 看「外挂到底能翻多少」——这是最该关注的那个数字
-python3 scripts/tools/analyze_coverage.py _upstream
+# 看「外挂到底能翻多少」——这是最该关注的那个数字（精确匹配口径）
+python3 scripts/tools/analyze_coverage.py _upstream --json build/coverage.json
 
-# 看有哪些新文案没翻
+# 看有没有「带实际内容」的缺口（有就退出码 1；CI 用的就是这一条）
+python3 scripts/tools/check-coverage-gap.py build/coverage.json
+
+# 看有哪些新文案没翻（全量口径，分母混着非 UI 常量，仅供参考）
 python3 scripts/tools/extract_strings.py _upstream zh-Hans.lproj/Localizable.strings
 
 # 补译 + 合并 + 校验
@@ -662,6 +786,44 @@ verbose 级别到 2 才有 `Authority=` 行。用 `-dv` 去 grep Authority 会�
 所以：**Release 附件名一律用纯 ASCII**；中文名保留在仓库文件名和 zip 内部
 （zip 内部文件名不受这个限制）。`make-langpack.sh` 与 workflow 的
 「组装发布物」那一步都带了断言，dist/ 里一旦出现非 ASCII 文件名就直接失败。
+
+**⑪ SwiftUI 的本地化 key 永远不带序号，`%1$@` 形式的 key 是死条目**
+
+语言包里曾有一批抄来的 key，长这样：
+
+```
+"%1$@ × %2$@ px" = "%1$@ × %2$@ 像素";
+```
+
+译文完全正确，但**运行时永远查不到** —— 因为 SwiftUI 的
+`LocalizedStringKey` 在运行时只生成不带序号的格式符。别猜，这个结论是实测的：
+用 `swiftc`（CommandLineTools 里就有，不用完整 Xcode）编译一小段代码，
+再用 `Mirror` 反射 `LocalizedStringKey` 内部的 `key` 字段：
+
+```swift
+let s = "Rectangle"; let i = 42
+dumpKey("Close \(s)")                    // -> "Close %@"
+dumpKey("\(s) by 10")                    // -> "%@ by 10"
+dumpKey("Current: \(i) × \(i) pixels")  // -> "Current: %lld × %lld pixels"
+dumpKey("\(s) of \(s).")                 // -> "%@ of %@."      ← 不编号
+```
+
+**序号只允许写在译文里**（那是给 `String(format:)` 用来重排参数的，
+`"%2$@的%1$@。"` 是合法的、也确实是这么用的）：
+
+| 位置 | 允许带序号吗 |
+| --- | --- |
+| key | ❌ 绝对不行（写了就查不到） |
+| 译文 | ✅ 要重排参数时必须用，且必须**全带**不能混用 |
+
+顺带记一个容易漏的点：`String(format:)` 对位置参数支持没问题，
+但 CFString 要求一个格式串里的占位符要么全带序号、要么全不带，
+混用是未定义行为。两条规则现在都在 `check-strings.py` 里强制。
+
+而之前之所以没暴露，是因为覆盖率用的是「骨架匹配」——只要占位符**位置**对上
+就算翻好，格式符类型写错（`Int` 插值写成 `%@`）和带序号这两种错都照单放过。
+现在改成精确匹配，并把 27 条插值文案的真实格式符登记进
+`scripts/tools/key-type-hints.json`，不再靠猜。
 </details>
 
 ---

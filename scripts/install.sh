@@ -115,6 +115,42 @@ pl_delete() {
   /usr/libexec/PlistBuddy -c "Delete :$2" "$(plist_of "$1")" >/dev/null 2>&1 || true
 }
 
+# ---------------------------------------------------------------- 遗留守护
+# 早期那条「自动恢复汉化」路线（已废弃）会装一个 LaunchAgent：
+#   ~/Library/LaunchAgents/com.wonderassembly.compositor.hanhua.plist
+# 它的 WatchPaths 同时盯着 /Applications/Compositor.app 和 /Applications，
+# 于是**任何**往 /Applications 里放东西的动作都会唤醒它，它随即把旧版
+# 语言包（1209 条）重新注入 app。留着它的坏处：
+#   * 它会在本脚本装完之后再抢着写一遍，把语言包换成旧版
+#   * 它会让「还原官方版」永远失败（还原完几秒又变中文）
+LEGACY_LABEL="com.wonderassembly.compositor.hanhua"
+LEGACY_PLIST="$HOME/Library/LaunchAgents/$LEGACY_LABEL.plist"
+LEGACY_PAYLOAD="$HOME/Library/Application Support/CompositorHanhua"
+
+legacy_present() {
+  [ -f "$LEGACY_PLIST" ] && return 0
+  [ -d "$LEGACY_PAYLOAD" ] && return 0
+  launchctl print "gui/$(id -u)/$LEGACY_LABEL" >/dev/null 2>&1 && return 0
+  return 1
+}
+
+remove_legacy_watchdog() {
+  legacy_present || return 0
+  say "==> 发现历史遗留的「自动汉化守护」，先拆掉它"
+  say "    它会在几秒内把旧版语言包再写回来，留着装不干净。"
+  launchctl bootout "gui/$(id -u)/$LEGACY_LABEL" >/dev/null 2>&1 || true
+  VAULT="$SUPPORT_DIR/legacy-removed/$(date +%Y%m%d-%H%M%S)"
+  mkdir -p "$VAULT"
+  if [ -f "$LEGACY_PLIST" ]; then
+    mv "$LEGACY_PLIST" "$VAULT/" 2>/dev/null && say "    → 已移走 ${LEGACY_LABEL}.plist（卸载开机自启）"
+  fi
+  if [ -d "$LEGACY_PAYLOAD" ]; then
+    mv "$LEGACY_PAYLOAD" "$VAULT/" 2>/dev/null && say "    → 已移走旧版语言包与补丁脚本"
+  fi
+  say "    东西都放在 ${VAULT}，想反悔可以搬回去。"
+  return 0
+}
+
 say "==================================================="
 say " Compositor 简体中文语言包 — 安装"
 say "==================================================="
@@ -235,6 +271,9 @@ PACK_CNT="$(grep -c '^"' "$PACK_PATH" || true)"
 say ""
 say "即将执行："
 STEPS=()
+if legacy_present; then
+  STEPS+=("拆掉历史遗留的「自动汉化守护」（旧方案装的，会抢着写回旧版语言包）")
+fi
 if [ "$ALREADY" -eq 0 ] && [ ! -d "$BACKUP_APP" ]; then
   STEPS+=("备份官方原版到 ~/Library/Application Support/Compositor-zh-Hans/backup/")
 fi
@@ -253,6 +292,11 @@ if [ "$ASSUME_YES" -ne 1 ]; then
   read -r ans || ans=""
   case "$ans" in y|Y|yes|YES) ;; *) say "已取消，未做任何改动。"; exit 0 ;; esac
 fi
+
+# ---------------------------------------------------------------- 5b. 拆遗留守护
+# 一定要在写语言包之前拆：否则它会在 /Applications 变化时立刻回写旧版。
+remove_legacy_watchdog
+say ""
 
 # ---------------------------------------------------------------- 6. 备份
 if [ "$ALREADY" -eq 0 ]; then
@@ -359,6 +403,12 @@ if [ "$AUTO" = "false" ]; then
   say "    ✅ 已关闭 Sparkle 自动更新"
 else
   warn "    ⚠️ SUEnableAutomaticChecks = ${AUTO}（预期 false，汉化可能被覆盖）"
+fi
+# 旧的 LaunchAgent 只要还在，下次登录就会复活并抢着覆盖语言包。
+if [ -f "$LEGACY_PLIST" ]; then
+  warn "    ⚠️ 旧版自动汉化守护仍在，语言包可能被它换成旧版"; OK=0
+else
+  say "    ✅ 无旧版自动汉化守护"
 fi
 # 注意刻意不用 --verify --strict：Compositor 内嵌 Sparkle.framework，
 # 而 strict 模式会对框架里的 Versions/Current 符号链接结构吹毛求疵 ——

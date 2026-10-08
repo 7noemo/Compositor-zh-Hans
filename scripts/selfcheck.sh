@@ -10,13 +10,16 @@
 #    1. 所有 Python 工具语法正常
 #    2. shell 雷区 lint（$VAR 后跟中文、set -e 下的失败命令替换 等）
 #    3. 所有 shell 脚本语法正常（bash -n）
-#    4. 语言包通过 check-strings.py（格式、重复键、占位符一致性）
-#    5. 安装 / 还原脚本的关键逻辑（哨兵完好、参数守卫）—— 全静态，无副作用
+#    4. 语言包通过 check-strings.py（格式、重复键、占位符一致性、
+#       key 禁止带序号 %1$@ —— SwiftUI 运行时不会生成这种 key）
+#    5. 安装 / 还原脚本的关键逻辑（哨兵完好、参数守卫、会拆旧方案的自动汉化守护）
+#       —— 全静态，无副作用
 #    6. 打包脚本能真的产出 zip、含语言包、非 ASCII 名带 UTF-8 标志位、包名纯 ASCII
 #    7. Release 说明能生成
 #    8. workflow YAML 能解析
 #    9. Release 附件名必须是纯 ASCII（GitHub 会改写非 ASCII 附件名）
-#   10. （可选 --src）拿上游源码算一遍覆盖率，低于阈值就失败
+#   10. （可选 --src）拿上游源码做**精确**覆盖率：低于阈值、
+#       或出现「带实际内容」的缺口就失败（顺便体检格式符提示表）
 #
 set -euo pipefail
 
@@ -27,7 +30,7 @@ cd "$ROOT"
 SRC_ARG=""
 # 阈值针对「外挂可翻译文案」口径（A 类）。这个数字本来就该接近 100%，
 # 因为剩下翻不了的根本不在分母里（它们属于 B 类）。
-MIN_COVERAGE=95
+MIN_COVERAGE=99
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -118,6 +121,17 @@ if [ -s "$PACK" ]; then
     bad "check-strings.py 未通过："
     tail -20 "$WORK/chk.out" | sed 's/^/     /'
   fi
+  # 再兜一道：key 里不许出现带序号的格式符。
+  # SwiftUI 的 LocalizedStringKey 在运行时只生成不带序号的格式符
+  # （\(String)->%@，\(Int)->%lld，\(Double)->%lf，swiftc 反射实测），
+  # 所以 "%1$@ × %2$@" 这种 key 永远查不到 —— 死条目。
+  # 序号只允许写在**译文**里做参数重排。
+  if grep -qE '^"[^"]*%[0-9]+\$[^"]*"[[:space:]]*=' "$PACK"; then
+    bad "语言包 key 里有带序号的格式符（%1\$@ 这种），运行时永远查不到："
+    grep -nE '^"[^"]*%[0-9]+\$[^"]*"[[:space:]]*=' "$PACK" | head -5 | sed 's/^/     /'
+  else
+    ok "语言包 key 没有带序号的格式符"
+  fi
 else
   bad "语言包不存在：${PACK}"
 fi
@@ -186,6 +200,27 @@ if grep -rqE 'localize_patch|xcodebuild|build-release' \
       --exclude='selfcheck.sh' . 2>/dev/null | head -5 | sed 's/^/     /'
 else
   ok "已无编译发行版残留"
+fi
+
+# 5.5 安装 / 还原脚本都必须能拆掉「旧方案留下的自动汉化守护」。
+#     那边（第三方的注入式汉化包）会装一个 LaunchAgent，WatchPaths 盯着
+#     /Applications，任何往那里装东西的动作都会唤醒它，它随即把旧版语言包
+#     回写进 Compositor.app。后果极具迷惑性：还原官方版后几秒界面自己变回
+#     中文，用户以为「官方版装不上了 / 装出来是半汉化的」。
+#     纯静态检查，不碰用户机器。
+LEGACY_LEAK=0
+for f in scripts/install.sh scripts/restore.sh; do
+  if ! grep -q 'com\.wonderassembly\.compositor\.hanhua' "$f" 2>/dev/null; then
+    bad "${f} 缺少旧方案自动汉化守护的识别逻辑"
+    LEGACY_LEAK=1
+  fi
+  if ! grep -q 'remove_legacy_watchdog' "$f" 2>/dev/null; then
+    bad "${f} 没有调用 remove_legacy_watchdog（旧守护会把语言包抢回旧版）"
+    LEGACY_LEAK=1
+  fi
+done
+if [ "$LEGACY_LEAK" -eq 0 ]; then
+  ok "两个脚本都会先拆掉旧方案的自动汉化守护"
 fi
 
 # ---------------------------------------------------------------- 6. 打包
@@ -371,6 +406,19 @@ import json;print(json.load(open('build/coverage.json'))['translatable']['covera
         ok "外挂可翻译文案覆盖率 ${PCT}% ≥ ${MIN_COVERAGE}%"
       else
         bad "覆盖率 ${PCT}% 低于阈值 ${MIN_COVERAGE}% —— 有新增文案没翻？"
+      fi
+
+      # 10.2 精确缺口 —— 比百分比更早报警。
+      #      允许剩下的只有「没有实际内容」的文案（空串、纯符号如 ·），
+      #      一旦出现带字母/数字的缺口，说明真的有文案没翻，立刻红。
+      #      判断逻辑在 tools/check-coverage-gap.py，CI 用的是同一份。
+      if "$PY" scripts/tools/check-coverage-gap.py build/coverage.json \
+           > "$WORK/gap.out" 2>&1; then
+        sed 's/^/     /' "$WORK/gap.out"
+        ok "A 类缺口只剩无实际内容的文案"
+      else
+        sed 's/^/     /' "$WORK/gap.out"
+        bad "有带实际内容的文案没翻（见上）—— 补上再推"
       fi
     else
       bad "analyze_coverage.py 失败："

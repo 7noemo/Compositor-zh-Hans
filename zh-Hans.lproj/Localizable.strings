@@ -4,11 +4,27 @@
  *
  * 词条来源：
  *   [A] skyecx/compositor-zh-hans 语言包（术语对齐 Adobe Photoshop 简体中文版）
- *   [B] 上游 PR #223 的 String Catalog（Xcode 从真实构建提取，key 可信）
- *   [C] 手工补充：v1.4.6 新增、经源码确认走 LocalizedStringKey 查表的文案
+ *   [B] 上游 PR #223 的 String Catalog（Xcode 从真实构建提取，广度可信）
+ *   [C] 手工补充：经源码逐个确认走 LocalizedStringKey 查表的文案
  *
- * 合计 1209 条：A=793 / B=408 / C=8
- * 校验：plutil -lint + tools/check-strings.py（占位符一致性）
+ * 合计 1253 条。
+ * 校验：plutil -lint
+ *       + tools/check-strings.py（占位符一致性）
+ *       + tools/verify_keys.py （key 与 SwiftUI 运行时精确对齐，见下）
+ *
+ * ⚠️ key 里绝不允许出现 %1$@ 这种带序号的格式符。
+ *
+ *    SwiftUI 的 LocalizedStringKey 在运行时**只生成不带序号**的格式符。
+ *    用 swiftc 反射 SwiftUI 内部 key 实测确认：
+ *        "Close \(s)"                    -> "Close %@"
+ *        "Current: \(w) × \(h) pixels"   -> "Current: %lld × %lld pixels"   (Int)
+ *        "\(d) px"                       -> "%lf px"                         (Double)
+ *    也就是说 key 永远长不成 "%1$@ × %2$@" 的样子 —— 带序号的 key 是
+ *    **死条目**，运行时查不到，译文再对也不会显示。
+ *
+ *    序号（%1$@）只允许出现在**译文**里，用来重排参数顺序，例如
+ *        "%@ of %@." = "%2$@的%1$@。"
+ *    这条规则由 tools/verify_keys.py 和 selfcheck.sh 第 11 项把关。
  */
 
 /* ===== [A] 原语言包词条 ===== */
@@ -636,14 +652,15 @@
 "%@…" = "%@…";
 "Edit %@." = "编辑 %@。";
 "In %@   Out %@" = "输入 %@   输出 %@";
-"%@°  %@" = "%@°  %@";
+"%lld°  %lld" = "%lld°  %lld";
 "Final dimensions must be 1–%@ pixels per side." = "最终尺寸每边须为 1–%@ 像素。";
 "Zoom in (⌘+), now %@. At 100% each pixel of the JPEG is one pixel of the screen, as on the canvas" = "放大（⌘+），当前 %@。在 100% 时 JPEG 的每个像素对应屏幕的一个像素，与画布一致";
 "Zoom out (⌘−), now %@" = "缩小（⌘−），当前 %@";
 "Drag or scroll to move around; double-click switches between Fit and 100%" = "拖动或滚动以平移视图；双击在适合屏幕与 100% 之间切换";
-"%@%" = "%@%";
+"%lld%" = "%lld%";
 "Enter a whole number from 1 to %@ px." = "请输入 1 到 %@ 之间的整数像素值。";
-"%@" = "%@";
+"Enter a whole number from 1 to %lld px." = "请输入 1 到 %lld 之间的整数像素值。";
+"%lld" = "%lld";
 "Develop “%@”" = "显影“%@”";
 "Line height, baseline to baseline. Empty or 0 is Auto: 120% of the font size." = "行高，从基线到基线。留空或为 0 表示自动：字体大小的 120%。";
 "Color Picker (%@ Color)" = "拾色器（%@色）";
@@ -841,27 +858,18 @@
 /* ===== [B] 自 PR #223 String Catalog 补充的词条 ===== */
 
 " Selection" = "选区";
-"%1$@ by 10" = "%1$@（步长 10）";
-"%1$@ color" = "%1$@颜色";
-"%1$@ copy" = "%1$@ 拷贝";
-"%1$@ degrees" = "%1$@ 度";
-"%1$@ effect" = "%1$@效果";
-"%1$@ is assigned to both %2$@ and %3$@." = "%2$@ 和 %3$@ 均使用了快捷键 %1$@。";
-"%1$@ is reserved by macOS." = "%1$@ 是 macOS 的保留快捷键。";
-"%1$@ of %2$@." = "%2$@的%1$@。";
-"%1$@ the selection by this many pixels" = "将选区%1$@指定的像素数";
-"%1$@ uncompressed RGBA canvas" = "未压缩 RGBA 画布：%1$@";
-"%1$@ × %2$@ px" = "%1$@ × %2$@ 像素";
-"%1$@. Double-click to reset." = "%1$@。双击可重置。";
+"%@ by 10" = "%1$@（步长 10）";
+"%@ copy" = "%1$@ 拷贝";
+"%@ degrees" = "%1$@ 度";
+"%@ effect" = "%1$@效果";
+"%@ of %@." = "%2$@的%1$@。";
+"%@ × %@ px" = "%1$@ × %2$@ 像素";
 "%lld more tabs" = "还有 %lld 个标签页";
 "(Multiple)" = "（多种字体）";
 "A little stronger than Version 1. The sliders below still fall well short of the current look." = "效果略强于版本 1。下方滑块的调整幅度仍明显小于当前版本。";
-"A subdivision every %1$@ pixels." = "每 %1$@ 像素一个子网格。";
-"Add %1$@" = "添加%1$@";
 "Add Mask" = "添加蒙版";
 "Add layer mask (Option-click for a black mask)" = "添加图层蒙版（按住 Option 单击可添加黑色蒙版）";
 "Add layer mask revealing the selection (Option-click to hide it)" = "添加显示选区的图层蒙版（按住 Option 单击可隐藏选区）";
-"Add to %1$@" = "添加到 %1$@";
 "Adds film grain, strongest in the middle tones." = "添加胶片颗粒，中间调区域的效果最强。";
 "Adds green or magenta to the darkest tones." = "为最暗的色调添加绿色或洋红。";
 "Adds or softens contrast along broader shapes." = "增强或减弱较大范围轮廓的对比度。";
@@ -869,7 +877,6 @@
 "Adjustment parameters may not match Photoshop exactly." = "调整参数可能与 Photoshop 不完全一致。";
 "Adjusts the bright parts of the picture. Hold Option to see clipped highlights." = "调整图像的明亮区域。按住 Option 可查看高光剪切。";
 "Adjusts the dark parts of the picture. Hold Option to see clipped shadows." = "调整图像的阴暗区域。按住 Option 可查看阴影剪切。";
-"Align %1$@" = "对齐：%1$@";
 "Another app changed this project. You can revert to the version on disk, losing your unsaved changes, or keep what you have." = "其他应用更改了此项目。可以恢复为磁盘上的版本（未保存的更改将丢失），也可以保留当前版本。";
 "Apply current canvas operation" = "应用当前画布操作";
 "Aquas" = "浅绿色";
@@ -879,7 +886,6 @@
 "Balance" = "平衡";
 "Black & White" = "黑白";
 "Blacks" = "黑色色阶";
-"Blend mode “%1$@” isn’t supported and will be applied as Normal." = "不支持混合模式“%1$@”，将使用“正常”模式。";
 "Blending" = "混合";
 "Bloom" = "辉光";
 "Blur / Smudge / Liquify" = "模糊 / 涂抹 / 液化";
@@ -889,13 +895,11 @@
 "Brightness added by this wheel." = "此色轮增加或减少的明亮度。";
 "Brush tool" = "画笔工具";
 "Calibration" = "校准";
-"Cancel %1$@" = "取消%1$@";
 "Cancel current canvas operation" = "取消当前画布操作";
 "Canvas & Layers" = "画布与图层";
 "Cell Size" = "单元格大小";
 "Choose a JPEG, PNG, HEIC, TIFF, or Photoshop (PSD) file." = "请选择 JPEG、PNG、HEIC、TIFF 或 Photoshop (PSD) 文件。";
 "Choose a single key with optional modifiers." = "请选择一个按键，可搭配修饰键使用。";
-"Choose the %1$@ color" = "选择%1$@颜色";
 "Choose the dark color" = "选择暗部颜色";
 "Choose the light color" = "选择亮部颜色";
 "Chooses how bright an area must be to glow. Has no effect until Glow is raised." = "设置产生辉光的亮度阈值。“发光”大于零时才有效。";
@@ -906,18 +910,11 @@
 "Click the image to pick the color to select." = "单击图像，拾取要选择的颜色。";
 "Click the image to select that color" = "单击图像以选择该颜色";
 "Click the image to take that color out of the selection" = "单击图像，从选区中减去该颜色";
-"Click the original layer to set %1$@. Click the eyedropper again to stop." = "单击原始图层设置%1$@。再次单击吸管可停止取样。";
 "Click to select similar colors · Tab for Object · Shift add · Option subtract · Drag inside to move · ⌘-drag moves pixels · Delete clears · ⌘D deselect" = "单击选择相似颜色 · Tab 切换对象选择 · Shift 添加 · Option 减去 · 在选区内拖动以移动 · ⌘-拖动移动像素 · Delete 清除 · ⌘D 取消选择";
-"Click to select; double-click to edit; Option-drag to copy %1$@" = "单击选择；双击编辑；按住 Option 拖动以复制%1$@";
-"Clipped to %1$@" = "剪贴至 %1$@";
-"Clipping mask based on %1$@. Option-click the bottom of its row to release." = "以 %1$@ 为基底的剪贴蒙版。按住 Option 单击该行底部可释放。";
-"Close %1$@" = "关闭 %1$@";
 "Close to the current process, with slightly softer primary and shadow shifts." = "接近当前处理版本，原色和阴影的调整幅度略小。";
 "Color Detail" = "颜色细节";
 "Color Grading" = "颜色分级";
 "Color Mixer" = "混色器";
-"Color Picker (%1$@ Color)" = "拾色器（%1$@颜色）";
-"Color Picker (%1$@)" = "拾色器（%1$@）";
 "Color Priority" = "颜色优先";
 "Color Range" = "色彩范围";
 "Color Smoothness" = "颜色平滑度";
@@ -925,12 +922,11 @@
 "Content-Aware" = "内容识别";
 "Controls how much the three tonal wheels overlap." = "控制三个色调色轮的作用范围相互重叠的程度。";
 "Controls how strong the sharpening is." = "控制锐化强度。";
-"Copy %1$@" = "复制%1$@";
 "Couldn’t trim image" = "无法修边";
 "Crop tool" = "裁剪工具";
 "Cropped to the canvas so the file fits in memory. Pixels outside the canvas weren't imported." = "为适应可用内存，图像已按画布范围裁切。未导入画布外的像素。";
 "Current default. The calibration sliders below apply at full strength." = "当前默认版本。下方校准滑块按完整强度应用。";
-"Current: %1$@ × %2$@ pixels" = "当前：%1$@ × %2$@ 像素";
+"Current: %@ × %@ pixels" = "当前：%1$@ × %2$@ 像素";
 "Cyan / Red" = "青色 / 红色";
 "Cycle shape kind" = "循环切换形状类型";
 "Cycle tool mode" = "循环切换工具模式";
@@ -941,13 +937,11 @@
 "Decrease leading" = "减小行距";
 "Decrease tracking" = "减小字符间距";
 "Dehaze" = "去朦胧";
-"Delete %1$@" = "删除%1$@";
 "Delete Selected Layers" = "删除所选图层";
 "Delete selected effect" = "删除所选效果";
 "Delete selection / layer / effect / lasso point" = "删除选区内容 / 图层 / 效果 / 套索顶点";
 "Density" = "浓度";
 "Detail" = "细节";
-"Develop “%1$@”" = "显影“%1$@”";
 "Diffusion" = "扩散";
 "Disable Mask" = "停用图层蒙版";
 "Distortion" = "扭曲";
@@ -957,32 +951,24 @@
 "Drag a point. Click to add one. Double-click a point to remove it." = "拖动控制点进行调整，单击添加控制点，双击删除控制点。";
 "Drag a text box · Click text to edit · Drag box handles to resize · ⌘Return finish · Escape cancel" = "拖动创建文本框 · 单击文字编辑 · 拖动控点调整大小 · ⌘Return 完成 · Esc 取消";
 "Drag on the picture to move the curve for the tone under the pointer." = "在图像上拖动，调整指针下方色调对应的曲线。";
-"Drag to draw a shape on a new layer · Shift %1$@ · Option from center · Shift-U or Tab for the next shape · Escape cancel · Space to pan" = "拖动在新图层上绘制形状 · Shift 约束为%1$@ · Option 从中心绘制 · Shift-U 或 Tab 切换形状 · Esc 取消 · 空格键平移";
 "Drag up or down to lift or lower those tones. Drag a divider along the bottom to change which tones each region covers." = "上下拖动可提亮或压暗相应色调。拖动底部的分隔点可调整各区域覆盖的色调范围。";
 "Dropped" = "拖入的图像";
 "Duplicate / Layer via Copy" = "复制 / 通过拷贝的图层";
 "Earliest response. Hue, saturation, and shadow tint move about half as far as Version 6." = "最早的处理方式。色相、饱和度和阴影色调的调整幅度约为版本 6 的一半。";
-"Edit %1$@" = "编辑%1$@";
-"Edit %1$@ Adjustment" = "编辑%1$@调整";
-"Edit %1$@." = "编辑%1$@。";
 "Editable Photoshop text becomes pixels and can’t be retyped." = "Photoshop 的可编辑文字将栅格化为像素，无法继续作为文字编辑。";
 "Editable text" = "可编辑文字";
 "Editable text layer" = "可编辑文字图层";
 "Effects" = "效果";
 "Emphasizes fine texture over broader edges." = "优先增强细微纹理，而非大范围边缘。";
 "Enable Mask" = "启用图层蒙版";
-"Enter a whole number from 1 to %1$@ px." = "请输入 1 至 %1$@ 之间的整数（像素）。";
-"Enter whole numbers from 1 to %1$@ pixels." = "请输入 1 至 %1$@ 之间的整数（像素）。";
 "Eyedropper tool" = "吸管工具";
 "Faux bold or faux italic was omitted." = "已忽略仿粗体和仿斜体效果。";
 "Fill Text" = "填充文字";
 "Fill with Background" = "使用背景色填充";
 "Fill with Foreground" = "使用前景色填充";
-"Final dimensions must be 1–%1$@ pixels per side." = "最终尺寸的每边必须为 1–%1$@ 像素。";
 "Finish editing text" = "完成文字编辑";
 "Firmer color than Version 2. Primary shifts stay gentler than the current process." = "颜色调整比版本 2 更强，原色调整仍比当前处理版本柔和。";
-"Folder %1$@" = "组 %1$@";
-"Folder blend mode “%1$@” isn’t supported. The folder will be pass-through." = "不支持组的混合模式“%1$@”，将使用“穿透”模式。";
+"Folder %@" = "组 %1$@";
 "Follow System" = "跟随系统";
 "Full justification was imported as left alignment." = "两端对齐已按左对齐导入。";
 "G" = "G";
@@ -999,8 +985,6 @@
 "Halftone Dots" = "半调圆点";
 "Halftone Lines" = "半调线条";
 "Hand tool" = "抓手工具";
-"Hide %1$@" = "隐藏%1$@";
-"Hide %1$@ in the preview" = "在预览中隐藏%1$@";
 "Hide All (Black)" = "隐藏全部（黑色）";
 "Highlight Clipping Indicator" = "高光剪切警告";
 "Highlight Priority" = "高光优先";
@@ -1018,14 +1002,13 @@
 "Hue range where green defringe runs." = "去除绿色色边的色相范围。";
 "Hue range where purple defringe runs." = "去除紫色色边的色相范围。";
 "Hue/Saturation" = "色相/饱和度";
-"Image export supports canvases up to %1$@ megapixels and %2$@ pixels per side." = "导出支持最多 %1$@ 百万像素、每边不超过 %2$@ 像素的画布。";
+"Image export supports canvases up to %@ megapixels and %@ pixels per side." = "导出支持最多 %1$@ 百万像素、每边不超过 %2$@ 像素的画布。";
 "Import Photoshop File" = "导入 Photoshop 文件";
-"In %1$@   Out %2$@" = "输入 %1$@   输出 %2$@";
 "Increase brush hardness" = "提高画笔硬度";
 "Increase brush size" = "增大画笔大小";
 "Increase leading" = "增大行距";
 "Increase tracking" = "增大字符间距";
-"Input %1$@ · Output %2$@" = "输入 %1$@ · 输出 %2$@";
+"Input %@ · Output %@" = "输入 %1$@ · 输出 %2$@";
 "Instagram Portrait" = "Instagram 竖版";
 "Instagram Square" = "Instagram 方形";
 "Instagram Story" = "Instagram 快拍";
@@ -1038,7 +1021,7 @@
 "Language" = "语言";
 "Language Changed" = "语言已更改";
 "Lasso / cycle mode" = "套索 / 循环切换模式";
-"Layer %1$@" = "图层 %1$@";
+"Layer %@" = "图层 %1$@";
 "Layer effects were discarded, so the appearance may differ." = "图层样式已被丢弃，外观可能有所不同。";
 "Lifts or lowers the brightest tones." = "提亮或压暗最亮的色调。";
 "Lifts or lowers the dark tones." = "提亮或压暗暗调。";
@@ -1049,7 +1032,6 @@
 "Limits sharpening to stronger edges. Hold Option to see the mask." = "将锐化限制在较明显的边缘。按住 Option 可查看蒙版。";
 "Line Spacing" = "行间距";
 "Link Mask" = "链接图层蒙版";
-"Link mask: %1$@" = "链接蒙版：%1$@";
 "Luminance" = "明亮度";
 "Luminance Contrast" = "明亮度对比度";
 "Luminance Detail" = "明亮度细节";
@@ -1072,27 +1054,20 @@
 "Menus" = "菜单";
 "Midpoint" = "中点";
 "Move / Transform tool" = "移动 / 变换工具";
-"Move selected pixels %1$@ 1 px" = "将所选像素向%1$@移动 1 像素";
-"Move selected pixels %1$@ 10 px" = "将所选像素向%1$@移动 10 像素";
 "Moves the picture left or right." = "向左或向右移动图像。";
 "Moves the picture up or down." = "向上或向下移动图像。";
 "Moves the vignette correction inward or outward." = "向内或向外移动晕影校正范围。";
-"New %1$@ Adjustment" = "新建%1$@调整";
 "New canvas (⌘N) · Drop images here for new tabs" = "新建画布 (⌘N) · 将图像拖放到此处可在新标签页打开";
-"New: %1$@ × %2$@ pixels · %3$@ uncompressed" = "新尺寸：%1$@ × %2$@ 像素 · 未压缩大小 %3$@";
+"New: %@ × %@ pixels · %@ uncompressed" = "新尺寸：%1$@ × %2$@ 像素 · 未压缩大小 %3$@";
 "Next blend mode" = "下一个混合模式";
-"Nudge %1$@ 1 px" = "向%1$@微移 1 像素";
-"Nudge %1$@ 10 px" = "向%1$@微移 10 像素";
 "Off" = "关闭";
 "Offset X" = "X 轴位移";
 "Offset Y" = "Y 轴位移";
 "Only 8-bit RGB Photoshop files can be imported." = "仅支持导入 8 位 RGB 模式的 Photoshop 文件。";
 "Only the first text style was kept." = "仅保留了第一种文字样式。";
-"Opacity digit %1$@ (type two for exact %)" = "不透明度数字键 %1$@（连续输入两位可设置精确百分比）";
-"Open “%1$@”?" = "打开“%1$@”？";
+"Opacity digit %@ (type two for exact %)" = "不透明度数字键 %1$@（连续输入两位可设置精确百分比）";
 "Optics" = "光学";
 "Oranges" = "橙色";
-"Original %1$@ histogram" = "原始%1$@直方图";
 "Paint Overlay" = "绘画叠加";
 "Parametric" = "参数";
 "Perspective" = "透视";
@@ -1110,11 +1085,9 @@
 "RGB histogram" = "RGB 直方图";
 "Reading the file to see what needs converting." = "正在读取文件，检查需要转换的内容。";
 "Rectilinear" = "直线";
-"Redo %1$@" = "重做%1$@";
 "Refine Saturation" = "优化饱和度";
-"Remove %1$@" = "移除%1$@";
 "Reset colors" = "重置颜色";
-"Result: %1$@ × %2$@ pixels" = "结果：%1$@ × %2$@ 像素";
+"Result: %@ × %@ pixels" = "结果：%1$@ × %2$@ 像素";
 "Reveal All (White)" = "显示全部（白色）";
 "Revert" = "恢复";
 "Rotates the picture around its center." = "围绕中心旋转图像。";
@@ -1122,14 +1095,12 @@
 "Saturation Range" = "饱和度范围";
 "Saturation Shift" = "饱和度偏移";
 "Save As" = "另存为";
-"Save changes to %1$@?" = "要保存对“%1$@”的更改吗？";
 "Scanlines (CRT)" = "扫描线 (CRT)";
 "Select Subject" = "选择主体";
-"Select image: %1$@" = "选择图像：%1$@";
+"Select image: %@" = "选择图像：%1$@";
 "Select layer mask; Option-click to view it alone; Shift-click to enable/disable; Cmd-click to select its black areas (Cmd-Shift adds, Cmd-Option subtracts)" = "选择图层蒙版；Option-单击单独查看；Shift-单击启用或停用；Cmd-单击选择黑色区域（Cmd-Shift 添加，Cmd-Option 减去）";
 "Select layer; Cmd-click to select its pixels (Cmd-Shift adds, Cmd-Option subtracts)" = "选择图层；Cmd-单击选择像素（Cmd-Shift 添加，Cmd-Option 减去）";
-"Select mask: %1$@" = "选择蒙版：%1$@";
-"Select text: %1$@" = "选择文字：%1$@";
+"Select text: %@" = "选择文字：%1$@";
 "Select tool" = "选择工具";
 "Sets how far the glow reaches. Has no effect until Glow is raised." = "设置发光的影响范围。“发光”大于零时才有效。";
 "Sets the brightest point. Hold Option to see clipped highlights." = "设置白场。按住 Option 可查看高光剪切。";
@@ -1147,8 +1118,6 @@
 "Shifts the picture from green to mauve." = "将图像色调从偏绿调整为偏洋红。";
 "Shifts the selected color family around the wheel." = "沿色轮调整所选色系的色相。";
 "Shifts the wheels toward shadows or highlights." = "将色轮的作用范围偏向阴影或高光。";
-"Show %1$@" = "显示%1$@";
-"Show %1$@ in the preview" = "在预览中显示%1$@";
 "Show Grid" = "显示网格";
 "Show Guides" = "显示参考线";
 "Show Rulers" = "显示标尺";
@@ -1184,14 +1153,11 @@
 "Text · Double-click to edit" = "文字 · 双击编辑";
 "Text-editing shortcuts need Command, Option, or Control so they do not replace normal typing." = "文字编辑快捷键必须包含 Command、Option 或 Control，以免影响正常输入。";
 "Texture" = "纹理";
-"That shape is too large. A shape can cover up to %1$@ megapixels." = "此形状过大。单个形状最多可覆盖 %1$@ 百万像素。";
-"That text box exceeds the %1$@-pixel or %2$@-megapixel limit." = "此文本框超过了单边 %1$@ 像素或总计 %2$@ 百万像素的限制。";
+"That text box exceeds the %@-pixel or %@-megapixel limit." = "此文本框超过了单边 %1$@ 像素或总计 %2$@ 百万像素的限制。";
 "The 2012 response. Calibration reaches most of the strength used by Version 6." = "2012 版处理方式。校准强度已接近版本 6。";
 "The Photoshop file could not be read. It may be damaged or incomplete." = "无法读取 Photoshop 文件。文件可能已损坏或不完整。";
 "The Photoshop stroke isn’t supported on shape layers and was omitted." = "不支持形状图层的 Photoshop 描边，已将其忽略。";
 "The Photoshop text warp was omitted." = "已忽略 Photoshop 文字变形效果。";
-"The copied layers exceed this project’s %1$@-megapixel limit." = "复制的图层超过了此项目 %1$@ 百万像素的限制。";
-"The font “%1$@” isn’t installed, so the text was drawn with the system font." = "尚未安装字体“%1$@”，已改用系统字体绘制文字。";
 "The layer mask couldn’t be converted to 8-bit grayscale and was skipped." = "无法将图层蒙版转换为 8 位灰度，已跳过。";
 "The new language will take effect the next time you open Compositor. You can keep working and save your documents before closing the app." = "新语言将在下次打开 Compositor 时生效。你可以继续工作，在关闭应用前保存文档。";
 "The smart object was rasterized. Linked contents can’t be edited." = "智能对象已被栅格化，无法编辑其链接内容。";
@@ -1199,9 +1165,8 @@
 "This Photoshop layer type isn’t supported and was imported as pixels." = "不支持此 Photoshop 图层类型，已作为像素图层导入。";
 "This adjustment type isn’t supported and was skipped." = "不支持此调整类型，已跳过。";
 "This clipping mask’s base isn’t supported, so clipping was skipped." = "不支持此剪贴蒙版的基底图层，已跳过剪贴关系。";
-"This import exceeds the current %1$@-megapixel document budget or %2$@-pixel side limit." = "此次导入超过了文档 %1$@ 百万像素的总限额，或单边 %2$@ 像素的限制。";
-"This project exceeds the supported canvas, layer, file-size, or %1$@-megapixel document limit." = "此项目超过了支持的画布、图层、文件大小限制，或文档 %1$@ 百万像素的总限额。";
-"This project uses format version %1$@. This app supports versions %2$@–%3$@." = "此项目使用格式版本 %1$@。本应用支持版本 %2$@–%3$@。";
+"This import exceeds the current %@-megapixel document budget or %@-pixel side limit." = "此次导入超过了文档 %1$@ 百万像素的总限额，或单边 %2$@ 像素的限制。";
+"This project exceeds the supported canvas, layer, file-size, or %@-megapixel document limit." = "此项目超过了支持的画布、图层、文件大小限制，或文档 %1$@ 百万像素的总限额。";
 "Three-Way" = "三向";
 "Toggle Clipping Mask" = "切换剪贴蒙版";
 "Toggle Levels preview" = "切换色阶预览";
@@ -1210,13 +1175,10 @@
 "Transform Layer / Selection" = "变换图层 / 选区";
 "Two Colors" = "双色";
 "Type tool" = "文字工具";
-"Undo %1$@" = "撤销%1$@";
 "Unlink Mask" = "取消链接图层蒙版";
-"Unlink mask: %1$@" = "取消链接蒙版：%1$@";
-"Untitled %1$@" = "未命名 %1$@";
 "Up" = "上";
-"Use 1–%1$@ pixels per side, up to %2$@ megapixels, and 1–9,600 pixels/inch." = "每边须为 1–%1$@ 像素，总计不超过 %2$@ 百万像素，分辨率为 1–9,600 像素/英寸。";
-"Use gridlines every %1$@–%2$@ pixels and %3$@–%4$@ subdivisions, no more than the pixels between gridlines." = "网格线间隔须为 %1$@–%2$@ 像素，子网格数须为 %3$@–%4$@，且不得超过网格线间的像素数。";
+"Use 1–%@ pixels per side, up to %@ megapixels, and 1–9,600 pixels/inch." = "每边须为 1–%1$@ 像素，总计不超过 %2$@ 百万像素，分辨率为 1–9,600 像素/英寸。";
+"Use gridlines every %@–%@ pixels and %@–%@ subdivisions, no more than the pixels between gridlines." = "网格线间隔须为 %1$@–%2$@ 像素，子网格数须为 %3$@–%4$@，且不得超过网格线间的像素数。";
 "Vector shape was rasterized to pixels." = "矢量形状已被栅格化为像素。";
 "Version 1" = "版本 1";
 "Version 2" = "版本 2";
@@ -1237,17 +1199,11 @@
 "Y" = "Y";
 "Yellow / Blue" = "黄色 / 蓝色";
 "YouTube Thumb" = "YouTube 缩略图";
-"Zoom in (⌘+), now %1$@. At 100% each pixel of the JPEG is one pixel of the screen, as on the canvas" = "放大 (⌘+)，当前为 %1$@。与画布一样，在 100% 时 JPEG 的每个像素对应屏幕的一个像素";
-"Zoom out (⌘−), now %1$@" = "缩小 (⌘−)，当前为 %1$@";
 "Zoom tool" = "缩放工具";
 "Zooms the transformed picture within the frame." = "在画框内缩放变换后的图像。";
 "circle" = "正圆";
 "square" = "正方形";
 "°" = "°";
-"“%1$@” is a folder, which has no pixels of its own. Paint on a layer inside it, or on the folder’s mask." = "“%1$@”是组，本身没有像素。请在组内的图层或组蒙版上绘画。";
-"“%1$@” is an adjustment layer, with no pixels to paint. Paint on its mask instead." = "“%1$@”是调整图层，没有可绘画的像素。请在其蒙版上绘画。";
-"“%1$@” is hidden, or inside a hidden folder. Show it to paint on it." = "“%1$@”已隐藏，或位于隐藏的组中。请先显示它，再进行绘画。";
-"“%1$@” was changed on disk." = "磁盘上的“%1$@”已被更改。";
 
 /* ===== [C] 手工补充（v1.4.6 新增文案） ===== */
 
