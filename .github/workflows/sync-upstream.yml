@@ -218,11 +218,34 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/make-langpack.sh "$VERSION" dist
-          # 一键脚本在第一步已经换成真实仓库地址，直接作为附件分发
-          cp -f "一键安装语言包.command" "一键还原官方版.command" dist/
+
+          # 一键脚本在第一步已经换成真实仓库地址，直接作为附件分发。
+          #
+          # 但附件名必须改成**纯 ASCII**：GitHub 会「重命名带特殊字符、
+          # 非 ASCII 字符的附件名」（官方文档 REST API → releases → assets
+          # 的 Notes 一节就是这么写的）。实测：
+          #     ?name=中文名          → 静默改写成 default.command
+          #     filename*=UTF-8''…    → 直接 400 "Invalid name for request"
+          # 而且两个中文名改写后会同名，报 422 already_exists —— 之前 CI
+          # 卡在「发布语言包 Release」那一步，就是这个原因，跟权限无关。
+          # 中文名保留在仓库文件与 zip 内部，这里只改「分发用的名字」。
+          cp -f "一键安装语言包.command" "dist/install-zh-Hans.command"
+          cp -f "一键还原官方版.command" "dist/restore-official.command"
           chmod +x dist/*.command
-          ZIP="Compositor-zh-Hans-语言包-v${VERSION}.zip"
+
+          ZIP="Compositor-zh-Hans-langpack-v${VERSION}.zip"
           echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+
+          # 顺带自证：dist/ 里所有文件名都必须是纯 ASCII，否则附件注定被改写。
+          # 这里不用 grep -q：它提前关管道会让 ls 收 SIGPIPE，
+          # 配上 pipefail 会把「有命中」误判成「没命中」。
+          BAD_NAME="$(LC_ALL=C ls dist | LC_ALL=C grep '[^ -~]' || true)"
+          if [ -n "$BAD_NAME" ]; then
+            echo "❗ dist/ 里出现了非 ASCII 文件名，GitHub 一定会改写它们："
+            printf '%s\n' "$BAD_NAME" | sed 's/^/     /'
+            exit 1
+          fi
+
           python3 scripts/tools/make_release_notes.py \
             --repo "$REPO" --version "$VERSION" --zip-name "$ZIP" \
             > dist/RELEASE_NOTES.md
@@ -362,14 +385,35 @@ jobs:
             echo ""
             echo "❗ 发布失败（退出码 ${RC}）。上面那行才是 gh 的原始报错。"
             echo "   常见原因："
-            echo "     1) 仓库 Settings → Actions → General → Workflow permissions"
+            echo "     1) 附件名/路径有问题：看上面「附件检查」有没有 ❌。"
+            echo "        ⚠️ 附件名必须纯 ASCII —— GitHub 会重命名含非 ASCII 的"
+            echo "           附件名，还会因此撞名报 422 ReleaseAsset.name already exists。"
+            echo "     2) 仓库 Settings → Actions → General → Workflow permissions"
             echo "        还停在 Read-only。改成「Read and write」后重跑本 workflow。"
             echo "        （注意：若真是这个原因，前面「有变化就提交」那一步的 git push"
             echo "          也会失败 —— 它成功了就说明权限没问题。）"
-            echo "     2) 已存在同名 tag/release 但指向别处：删掉后重跑。"
-            echo "     3) 附件名/路径有问题：看上面「附件检查」有没有 ❌。"
+            echo "     3) 已存在同名 tag/release 但指向别处：删掉后重跑。"
             exit "$RC"
           fi
+
+          # 附件名核对：GitHub 会悄悄改写含特殊字符/非 ASCII 的附件名，
+          # 而且**不报错**。用户下载到一个叫 default.command 的怪文件才发现就晚了，
+          # 所以这里把「预期名」和「实际存下来的名」对一遍。
+          echo ""
+          echo "==> 核对附件名（确认没被 GitHub 改写）"
+          WANT="$(for f in "${ASSETS[@]}"; do basename "$f"; done | LC_ALL=C sort)"
+          GOT="$(gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null | LC_ALL=C sort || true)"
+          if [ "$WANT" != "$GOT" ]; then
+            echo "❗ 附件名与预期不一致 —— GitHub 改写过它们。"
+            echo "   预期："
+            printf '%s\n' "$WANT" | sed 's/^/     /'
+            echo "   实际："
+            printf '%s\n' "$GOT"  | sed 's/^/     /'
+            echo "   修法：附件名必须纯 ASCII（含中文的会被改写成 default.xxx）。"
+            exit 1
+          fi
+          echo "    ✅ 附件名均为纯 ASCII，与预期一致："
+          printf '%s\n' "$GOT" | sed 's/^/       /'
 
           echo "--- 现在的 Release ---"
           gh release list --limit 5
