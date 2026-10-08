@@ -6,10 +6,16 @@
 #
 # 检查项
 #   1. 各 Python 工具语法正常
+#   1b. shell 脚本没有「中文项目特有」的雷区（macOS bash 3.2 变量名吞噬等）
 #   2. 补丁可重复执行（幂等）—— 第二遍不应再产生任何改动
+#   2b. L() 调用形状正确（单实参、无参数标签）—— swiftc -parse 抓不到这类错
 #   3. 补丁后 146 个 .swift 全部能通过 swiftc -parse（真正的语法校验）
 #   4. 语言包通过 check-strings.py
 #   5. 覆盖率不低于阈值
+#
+# 注意 2b 与 3 的分工：swiftc -parse 只做语法分析，
+# `Label(L("a", systemImage: "b"))` 语法合法、编译期才报 extra argument，
+# 而它会让 xcodebuild 以 65 退出。所以单独用文本扫描兜住这一层。
 #
 # 这一步的价值：CI 里它比完整编译快得多，能在几分钟内拦下
 # 「上游改了写法导致 Rule 落空」或「补丁把括号改坏了」这类问题。
@@ -75,6 +81,17 @@ fi
 REPO="${GITHUB_REPOSITORY:-selfcheck/local}"
 "$PY" scripts/tools/localize_patch.py "$WORK/a" --repo "$REPO" >/dev/null
 ok "补丁应用完成"
+
+# ---------------------------------------------------------------- 2b. 调用形状
+# swiftc -parse 只查语法，抓不到「L("a", systemImage: "b")」这类
+# 语法合法、编译期才报 extra argument 的写法 —— 而这种错误会让
+# xcodebuild 以 65 退出，整条出包流水线死掉，本地自检却全绿。
+step "检查 L() 调用形状（多实参 / 参数标签）"
+if "$PY" scripts/tools/lint-swift.py "$WORK/a/Compositor"; then
+  :
+else
+  bad "L() 调用形状错误（xcodebuild 一定会失败，详见上）"
+fi
 
 # ---------------------------------------------------------------- 3. 幂等
 step "验证补丁幂等（第二遍不应产生改动）"

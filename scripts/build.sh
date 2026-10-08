@@ -75,7 +75,14 @@ echo "    $APP_NAME $VERSION ($BUILD_NO)"
 echo "==> 编译（Release, ad-hoc 签名）"
 # 没有 Developer ID 证书，所以显式指定 ad-hoc（"-"）。
 # 注意 CODE_SIGN_STYLE 必须为 Manual，否则 xcodebuild 会去找自动签名证书而失败。
-xcodebuild -quiet \
+#
+# 关于日志：早期这里用 -quiet 并且不落盘，结果编译失败时 CI 里只剩
+# 一句 "Process completed with exit code 65"，完全看不出错在哪，
+# 只能靠反复重跑 15 分钟的 macOS runner 来试错。
+# 现在改成：完整日志写进文件（不刷屏），失败时自动把 error: 行挑出来打印。
+XCODE_LOG="$WORK/xcodebuild.log"
+xcode_status=0
+xcodebuild \
   -project "$SRC_DIR/Compositor.xcodeproj" \
   -scheme "$APP_NAME" \
   -configuration Release \
@@ -87,7 +94,20 @@ xcodebuild -quiet \
   CODE_SIGNING_ALLOWED=YES \
   DEVELOPMENT_TEAM="" \
   PROVISIONING_PROFILE_SPECIFIER="" \
-  build
+  build > "$XCODE_LOG" 2>&1 || xcode_status=$?
+
+if [ "$xcode_status" -ne 0 ]; then
+  echo "❗ xcodebuild 失败（退出码 ${xcode_status}）" >&2
+  echo "   完整日志：$XCODE_LOG" >&2
+  echo "   —— 错误行 ——" >&2
+  # grep 无匹配会返回 1，这里必须 || true，否则 set -e 会让本段自己挂掉
+  grep -nE '[^A-Za-z](error|fatal error):' "$XCODE_LOG" | head -60 >&2 || true
+  echo "   —— 日志末尾 20 行 ——" >&2
+  tail -20 "$XCODE_LOG" >&2 || true
+  echo "   如果一个 error: 都没有，多半是签名/工具链问题，请把完整日志附上来。" >&2
+  exit "$xcode_status"
+fi
+echo "   编译完成（日志 $(wc -l < "$XCODE_LOG" | tr -d ' ') 行：${XCODE_LOG}）"
 
 APP_PATH="$WORK/DerivedData/Build/Products/Release/$APP_NAME.app"
 if [ ! -d "$APP_PATH" ]; then

@@ -64,6 +64,21 @@ func L(_ key: String) -> String {
     return Bundle.main.localizedString(forKey: key, value: key, table: nil)
 }
 
+// 兜底重载：补丁是「文本级」改写，个别位置可能把非 String 的表达式也包了进来
+// （Int 型枚举裸值、可选值、自定义结构体……）。那些位置如果编译不过，
+// 整个 app 就出不来，代价远大于少翻译一句。
+//
+// 失败模式的设计原则是「查不到就原样显示」，所以这里统一兜成同一个语义：
+//   * 正好是 String -> 当作 key 查表
+//   * 其它类型     -> 转成描述文本返回（等价于「没翻译」）
+//
+// Swift 的重载决议优先选更具体的类型，因此 L("字面量") / L(某个String变量)
+// 仍然命中上面那个精确重载，行为完全不变。
+func L(_ value: Any) -> String {
+    if let text = value as? String { return L(text) }
+    return String(describing: value)
+}
+
 func LF(_ format: String, _ args: CVarArg...) -> String {
     guard !format.isEmpty else { return format }
     let resolved = Bundle.main.localizedString(forKey: format, value: format, table: nil)
@@ -167,6 +182,40 @@ def _expr_ok(arg):
     return True
 
 
+def _split_first_arg(arg):
+    """把实参列表切成 (第一个实参, 其余含前导逗号)。
+
+    没有顶层逗号时第二项是空串。括号、方括号、字符串字面量内部的逗号不算顶层。
+
+    为什么需要它：Label("New", systemImage: "plus") 这类多参数调用，
+    如果整体包进去会得到 Label(L("New", systemImage: "plus")) —— 语法合法、
+    但 L() 只收一个参数，编译期报 "extra argument"，而 swiftc -parse 看不出来。
+    """
+    depth = 0
+    i, n = 0, len(arg)
+    while i < n:
+        c = arg[i]
+        if c == '"':
+            i += 1
+            while i < n:
+                if arg[i] == "\\":
+                    i += 2
+                    continue
+                if arg[i] == '"':
+                    break
+                i += 1
+            i += 1
+            continue
+        if c in "([":
+            depth += 1
+        elif c in ")]":
+            depth -= 1
+        elif c == "," and depth == 0:
+            return arg[:i], arg[i:]
+        i += 1
+    return arg, ""
+
+
 def _should_wrap(arg, wrap_pure_literal):
     if _expr_ok(arg) is False:
         return False
@@ -205,11 +254,18 @@ def wrap_line(line, report_skipped, report_excluded, rel):
             pos = open_idx + 1
             continue
         arg = line[open_idx + 1:close]
-        if _should_wrap(arg, pure):
+        # 只包「第一个实参」。多参数调用（Label("x", systemImage: "y")）必须这样处理：
+        # L() 只收一个参数，整体包进去 = 编译错误。
+        # 对 Label 而言，第一个参数从 LocalizedStringKey 换成 String 会走
+        # `init<S: StringProtocol>(_ title: S, systemImage:)` 这个重载，
+        # 而它本来就不查表 —— 正好是我们想要的（查表已经由 L() 做完了）。
+        first, rest = _split_first_arg(arg)
+        if _should_wrap(first, pure):
             out.append(line[pos:open_idx + 1])   # 含开括号
             out.append("L(")
-            out.append(arg)
+            out.append(first)
             out.append(")")
+            out.append(rest)                     # 其余实参原样接在后面
             out.append(line[close])              # 务必补回原来的右括号
             wrapped += 1
         else:

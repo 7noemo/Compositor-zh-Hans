@@ -110,6 +110,17 @@ jobs:
           set -euo pipefail
           bash scripts/build.sh
 
+      # 编译失败时把完整 xcodebuild 日志传上来。
+      # 以前只有 -quiet 且不落盘，失败时 CI 里只剩一句 exit 65，无从下手。
+      - name: 失败时上传编译日志
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: build/_build/xcodebuild.log
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: 读取版本号
         id: ver
         run: |
