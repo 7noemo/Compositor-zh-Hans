@@ -8,20 +8,29 @@
   },
   "localized": {
     "repo": "7noemo/Compositor-zh-Hans",
-    "strings_total": 1312,
+    "strings_total": 1313,
     "translatable_strings": 423,
     "translatable_covered": 421,
     "coverage_percent": 99.5,
     "untranslatable_sites": 205,
     "untranslatable_expressions": 95,
     "scan_found": 1170,
-    "scan_covered": 1085,
-    "scan_todo": 85,
-    "scan_coverage_percent": 92.7,
+    "scan_covered": 1086,
+    "scan_todo": 84,
+    "scan_coverage_percent": 92.8,
     "last_sync": "2026-10-08",
     "last_release": "lang-v1.4.6"
   },
   "history": [
+    {
+      "tag": "v1.4.6",
+      "version": "1.4.6",
+      "synced_at": "2026-10-08",
+      "strings_total": 1313,
+      "coverage_percent": 99.5,
+      "release_tag": "lang-v1.4.6",
+      "note": "上游发新版，自动同步"
+    },
     {
       "tag": "v1.4.6",
       "version": "1.4.6",
