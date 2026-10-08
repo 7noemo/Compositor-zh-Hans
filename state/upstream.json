@@ -19,9 +19,18 @@
     "scan_todo": 85,
     "scan_coverage_percent": 92.7,
     "last_sync": "2026-10-08",
-    "last_release": null
+    "last_release": "lang-v1.4.6"
   },
   "history": [
+    {
+      "tag": "v1.4.6",
+      "version": "1.4.6",
+      "synced_at": "2026-10-08",
+      "strings_total": 1312,
+      "coverage_percent": 99.5,
+      "release_tag": "lang-v1.4.6",
+      "note": "上游发新版，自动同步"
+    },
     {
       "tag": "v1.4.6",
       "version": "1.4.6",
