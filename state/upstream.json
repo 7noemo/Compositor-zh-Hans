@@ -35,6 +35,15 @@
       "tag": "v1.4.6",
       "version": "1.4.6",
       "synced_at": "2026-10-08",
+      "strings_total": 1313,
+      "coverage_percent": 99.5,
+      "release_tag": "lang-v1.4.6",
+      "note": "上游发新版，自动同步"
+    },
+    {
+      "tag": "v1.4.6",
+      "version": "1.4.6",
+      "synced_at": "2026-10-08",
       "strings_total": 1312,
       "coverage_percent": 99.5,
       "release_tag": "lang-v1.4.6",
