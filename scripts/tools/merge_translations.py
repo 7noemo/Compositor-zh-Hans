@@ -14,9 +14,9 @@
 """
 import os
 import re
-import shutil
-import subprocess
 import sys
+
+import strings_syntax      # 同目录的公共模块：.strings 语法检查只留一份实现
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PACK = os.path.join(ROOT, "zh-Hans.lproj", "Localizable.strings")
@@ -51,55 +51,14 @@ def load_tsv(path, strict=True):
     return rows, dupes
 
 
-def lint(path):
-    """语法检查。macOS 上用 plutil；其它平台用纯 Python 兜底。
+def lint(path, force_python=False):
+    """语法检查。实现只有一份，在 strings_syntax.py —— 见那里的说明。
 
-    返回 (ok, 详情)。纯 Python 那一版检查：
-      * 每一行要么是空行 / 注释，要么是一条完整的 "k" = "v"; 语句
-      * 引号成对，转义合法
-
-    能用 plutil 就优先用（它是权威）。但**兜底那一版必须能独立通过** ——
-    CI 跑在 Linux 上，没有 plutil，走的就是它。两边不一致出现过一次真实事故：
-    块注释 `/* … */` 的**续行**不以 `/*` 或 `*` 开头（例如以中文开头、
-    行尾才写 `*/`），旧版兜底会把它当成词条判为非法 →
-    本地 plutil 说 OK，推到 CI 直接红。
-
-    调试用：设 MERGE_LINT_FORCE_PY=1 可强制走纯 Python 那版，
-    用来在本地复现「CI 会怎么判」。
+    以前这里和 check-strings.py 各抄了一份「纯 Python 兜底」，两份写法一旦
+    不同就出现「本地 plutil 说 OK、Linux CI 判非法」。抽成公共模块后不可能再分歧。
+    本地想复现 CI 的判定：force_python=True，或设 STRINGS_LINT_FORCE_PY=1。
     """
-    if os.environ.get("MERGE_LINT_FORCE_PY") != "1" and shutil.which("plutil"):
-        r = subprocess.run(["plutil", "-lint", path], capture_output=True, text=True)
-        return r.returncode == 0, (r.stdout + r.stderr).strip()
-
-    bad = []
-    in_block = False        # 是否正处在 /* … */ 块注释里
-    for lineno, raw in enumerate(open(path, encoding="utf-8"), 1):
-        line = raw.rstrip("\n")
-        s = line.strip()
-        if in_block:
-            # 块注释内部：只关心这行有没有把它关掉，其余一律不管
-            if "*/" in s:
-                in_block = False
-            continue
-        if not s or s.startswith("//"):
-            continue
-        if s.startswith("/*"):
-            if "*/" not in s:       # 单行注释（/* … */）就在这里结束
-                in_block = True
-            continue
-        if s.startswith("*/"):
-            continue
-        if not LINE_OK.match(line):
-            bad.append(f"第 {lineno} 行不像合法词条：{line[:70]}")
-    if in_block:
-        bad.append("块注释 /* 没有闭合")
-    if bad:
-        return False, "\n".join(bad[:10])
-    return True, "纯 Python 校验通过"
-
-
-LINE_OK = re.compile(
-    r'^\s*(?:"(?:[^"\\]|\\.)*"\s*=\s*"(?:[^"\\]|\\.)*"\s*;\s*(?://.*)?)$')
+    return strings_syntax.lint_strings(path, force_python=force_python)
 
 
 def main():

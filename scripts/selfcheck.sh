@@ -12,6 +12,8 @@
 #    3. 所有 shell 脚本语法正常（bash -n）
 #    4. 语言包通过 check-strings.py（格式、重复键、占位符一致性、
 #       key 禁止带序号 %1$@ —— SwiftUI 运行时不会生成这种 key）
+#       另外强制跑一遍「纯 Python 兜底语法检查」：Mac 有 plutil、Linux CI 没有，
+#       两边判得不一样就是「本地绿、CI 红」，必须在这里先发现
 #    5. 安装 / 还原脚本的关键逻辑（哨兵完好、参数守卫、会拆旧方案的自动汉化守护）
 #       —— 全静态，无副作用
 #    6. 打包脚本能真的产出 zip、含语言包、非 ASCII 名带 UTF-8 标志位、包名纯 ASCII
@@ -71,7 +73,7 @@ for f in scripts/tools/*.py; do
     "$PY" -c "import ast,sys;ast.parse(open(sys.argv[1],encoding='utf-8').read())" "$f" 2>&1 | tail -3 | sed 's/^/     /' || true
   fi
 done
-[ "$n" -gt 0 ] && ok "${n} 个 Python 工具语法正常"
+[ "$n" -gt 0 ] && ok "${n} 个 tools/ 下的 Python 文件语法正常"
 
 # ---------------------------------------------------------------- 2. shell 雷区
 head1 "2. shell 雷区 lint"
@@ -133,23 +135,33 @@ if [ -s "$PACK" ]; then
     ok "语言包 key 没有带序号的格式符"
   fi
 
-  # 4.4 merge_translations.py 的「纯 Python 兜底 lint」必须独立通过。
+  # 4.4 纯 Python 兜底语法检查必须独立通过。
   #     Mac 上有 plutil，本地走的是权威那一版；CI 跑在 Linux 上没有 plutil，
   #     走的是纯 Python 那一版。两边判得不一样就是「本地绿、CI 红」——
-  #     踩过一次：块注释的续行不以 /* 或 * 开头，兜底版把它当非法词条。
-  #     这里显式强制走兜底版，把分歧挡在本地。
-  if MERGE_LINT_FORCE_PY=1 "$PY" -c "
+  #     踩过一次：块注释的续行不以 /* 或 * 开头（以中文开头、行尾才写 */），
+  #     旧版只按行首判断，把它当非法词条。
+  #     现在实现只在 tools/strings_syntax.py 里有一份，这里强制它单独跑一遍，
+  #     把「本地看不到的分歧」挡在提交之前。
+  if STRINGS_LINT_FORCE_PY=1 "$PY" -c "
 import sys
 sys.path.insert(0, 'scripts/tools')
-import merge_translations as m
-ok, detail = m.lint('${PACK}')
+import strings_syntax as s
+ok, detail = s.lint_strings('${PACK}', force_python=True)
 print(detail)
 raise SystemExit(0 if ok else 1)
 " > "$WORK/pylint.out" 2>&1; then
-    ok "纯 Python 兜底 lint 也通过（CI 在 Linux 上没有 plutil，走的就是这一版）"
+    ok "纯 Python 兜底语法检查也通过（CI 在 Linux 上没有 plutil，走的就是这一版）"
   else
-    bad "纯 Python 兜底 lint 未通过 —— 本地有 plutil 会掩盖它，CI 必炸："
+    bad "纯 Python 兜底语法检查未通过 —— 本地有 plutil 会掩盖它，CI 必炸："
     sed 's/^/     /' "$WORK/pylint.out"
+  fi
+
+  # 4.5 两个工具都必须真的用上公共实现，不许再各抄一份。
+  if grep -qE '^\s*import strings_syntax' scripts/tools/check-strings.py &&
+     grep -qE '^\s*import strings_syntax' scripts/tools/merge_translations.py; then
+    ok "check-strings / merge_translations 都复用 strings_syntax.py"
+  else
+    bad "有工具没有 import strings_syntax —— 语法检查又会被抄成两份并产生分歧"
   fi
 else
   bad "语言包不存在：${PACK}"

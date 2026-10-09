@@ -3,7 +3,8 @@
 r"""校验 zh-Hans.lproj/Localizable.strings 的完整性与一致性。
 
 检查项：
-  1. 语法能被 plutil 接受
+  1. 语法能被 plutil 接受（没有 plutil 时用 tools/strings_syntax.py 的等效校验，
+     Linux CI 走的就是这一版 —— 实现只有一份，两边不会分歧）
   2. 没有重复 key
   3. key / value 都非空，且不会出现只有空格的翻译
   4. 英文与中文的占位符（%@ %d %ld %.2f %1$@ 等）数量与种类一致
@@ -34,12 +35,9 @@ r"""校验 zh-Hans.lproj/Localizable.strings 的完整性与一致性。
 """
 import os
 import re
-import shutil
-import subprocess
 import sys
 
-LINE_OK = re.compile(
-    r'^\s*(?:"(?:[^"\\]|\\.)*"\s*=\s*"(?:[^"\\]|\\.)*"\s*;\s*(?://.*)?)$')
+import strings_syntax      # 同目录的公共模块：.strings 语法检查只留一份实现
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SRC = os.path.join(ROOT, "zh-Hans.lproj", "Localizable.strings")
@@ -55,30 +53,15 @@ def main():
         print(f"❌ 找不到 {SRC}", file=sys.stderr)
         return 1
 
-    if shutil.which("plutil"):
-        r = subprocess.run(["plutil", "-lint", SRC], capture_output=True, text=True)
-        if r.returncode != 0:
-            print("❌ plutil -lint 未通过：")
-            print(r.stdout + r.stderr)
-            return 1
-        print("✅ plutil -lint 通过")
-    else:
-        # 同步流水线跑在 Linux 上，没有 plutil；用纯 Python 做等效检查
-        bad = []
-        for lineno, raw in enumerate(open(SRC, encoding="utf-8"), 1):
-            line = raw.rstrip("\n")
-            if not line.strip() or line.lstrip().startswith(("/*", "*", "//")):
-                continue
-            if line.strip() == "*/":
-                continue
-            if not LINE_OK.match(line):
-                bad.append(f"第 {lineno} 行不像合法词条：{line[:70]}")
-        if bad:
-            print("❌ 语法检查未通过（本地无 plutil，改用纯 Python 校验）：")
-            for b in bad[:10]:
-                print("   " + b)
-            return 1
-        print("✅ 语法检查通过（本地无 plutil，已改用纯 Python 校验）")
+    # 语法检查：实现只有一份，在 strings_syntax.py（见那里的说明）。
+    # 早先这里和 merge_translations.py 各抄了一份纯 Python 兜底版，
+    # 两份对「块注释续行」的判定不一致，导致本地绿、Linux CI 红。
+    ok, detail = strings_syntax.lint_strings(SRC)
+    if not ok:
+        print("❌ 语法检查未通过：")
+        print(detail)
+        return 1
+    print("✅ 语法检查通过（本地有 plutil 时走 plutil，否则纯 Python 等效校验）")
 
     seen = {}
     entries = []
