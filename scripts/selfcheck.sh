@@ -132,6 +132,25 @@ if [ -s "$PACK" ]; then
   else
     ok "语言包 key 没有带序号的格式符"
   fi
+
+  # 4.4 merge_translations.py 的「纯 Python 兜底 lint」必须独立通过。
+  #     Mac 上有 plutil，本地走的是权威那一版；CI 跑在 Linux 上没有 plutil，
+  #     走的是纯 Python 那一版。两边判得不一样就是「本地绿、CI 红」——
+  #     踩过一次：块注释的续行不以 /* 或 * 开头，兜底版把它当非法词条。
+  #     这里显式强制走兜底版，把分歧挡在本地。
+  if MERGE_LINT_FORCE_PY=1 "$PY" -c "
+import sys
+sys.path.insert(0, 'scripts/tools')
+import merge_translations as m
+ok, detail = m.lint('${PACK}')
+print(detail)
+raise SystemExit(0 if ok else 1)
+" > "$WORK/pylint.out" 2>&1; then
+    ok "纯 Python 兜底 lint 也通过（CI 在 Linux 上没有 plutil，走的就是这一版）"
+  else
+    bad "纯 Python 兜底 lint 未通过 —— 本地有 plutil 会掩盖它，CI 必炸："
+    sed 's/^/     /' "$WORK/pylint.out"
+  fi
 else
   bad "语言包不存在：${PACK}"
 fi
