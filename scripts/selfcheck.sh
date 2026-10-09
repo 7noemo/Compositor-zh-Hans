@@ -189,15 +189,23 @@ if [ -f scripts/restore.sh ]; then
 fi
 
 # 5.4 仓库里不该再出现编译发行版的残留
-#     注意把自己排除掉 —— 报错文案里就带着这几个词，不排除的话永远自匹配。
+#     注意两点：
+#       * 把自己排除掉 —— 报错文案里就带着这几个词，不排除的话永远自匹配。
+#       * 把 _upstream/ 排除掉 —— 那是 fetch-upstream.sh 拉下来的**上游源码**，
+#         里面本来就有 xcodebuild/release.sh（上游自己就出 DMG），
+#         不排除的话本地一拉源码自检就假红。
 #     用 grep -E：macOS 是 BSD grep，BRE 的 \| 行为不可靠。
 if grep -rqE 'localize_patch|xcodebuild|build-release' \
       --include='*.sh' --include='*.yml' --include='*.py' \
-      --exclude='selfcheck.sh' . 2>/dev/null; then
+      --exclude='selfcheck.sh' \
+      --exclude-dir='_upstream' --exclude-dir='build' \
+      --exclude-dir='dist' --exclude-dir='.git' . 2>/dev/null; then
   bad "还能找到编译发行版的残留引用（localize_patch / xcodebuild / build-release）"
   grep -rnE 'localize_patch|xcodebuild|build-release' \
       --include='*.sh' --include='*.yml' --include='*.py' \
-      --exclude='selfcheck.sh' . 2>/dev/null | head -5 | sed 's/^/     /'
+      --exclude='selfcheck.sh' \
+      --exclude-dir='_upstream' --exclude-dir='build' \
+      --exclude-dir='dist' --exclude-dir='.git' . 2>/dev/null | head -5 | sed 's/^/     /'
 else
   ok "已无编译发行版残留"
 fi
@@ -395,6 +403,15 @@ fi
 
 # ---------------------------------------------------------------- 10. 覆盖率
 head1 "10. 覆盖率（外挂方案口径）"
+
+# 没传 --src 时，本地若已有 fetch-upstream.sh 拉下来的源码就直接用它。
+# 覆盖率 + 缺口检查是这套方案最重要的一道闸，静默跳过等于没查 ——
+# 曾经因此让「有译文却显示英文」的条目漏过很久，所以宁可自动猜一次并说明。
+if [ -z "$SRC_ARG" ] && [ -d "_upstream" ]; then
+  SRC_ARG="_upstream"
+  warn "未传 --src，自动使用现有的 _upstream/（想指定别的加 --src <目录>）"
+fi
+
 if [ -n "$SRC_ARG" ]; then
   if [ -d "$SRC_ARG" ]; then
     if "$PY" scripts/tools/analyze_coverage.py "$SRC_ARG" \
@@ -428,7 +445,7 @@ import json;print(json.load(open('build/coverage.json'))['translatable']['covera
     warn "目录不存在，跳过覆盖率检查：${SRC_ARG}"
   fi
 else
-  warn "未传 --src，跳过覆盖率检查（加上参数即可启用）"
+  warn "未传 --src 且没有 _upstream/，跳过覆盖率检查（先跑 bash scripts/fetch-upstream.sh）"
 fi
 
 # ---------------------------------------------------------------- 收尾

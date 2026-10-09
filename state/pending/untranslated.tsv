@@ -1,13 +1,3 @@
 # 术语表未命中、LLM 也没处理掉的界面文案。
 # 想自己翻：把 key<TAB>译文 加到 translations/curated.tsv 即可。
 # 确认无需翻译：把 key 加到 translations/never-translate.txt。
-%lld DPI		
-) · Option from center · Shift-U or Tab for the next shape · Escape cancel · Space to pan		
-)” was changed on disk.		
-Drag to draw a shape on a new layer · Shift %@		
-Properties		
-R %@   G %@   B %@		
-Save changes to %@		
-Select %@		
-levels%@		
-· %lld DPI: %@ × %@ pixels		

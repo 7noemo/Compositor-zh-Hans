@@ -11,6 +11,7 @@ r"""衡量「外挂语言包」方案的真实覆盖上限。
 
       A 类 —— 字面量直接写在本地化位置上，例如
                 Text("Add Layer") / .help("Invert") / Label("New", systemImage: "plus")
+                .help(cond ? "Add mask" : "Remove mask")     ← 三元也算，见下
               SwiftUI 会把它当 LocalizedStringKey，运行时查 Localizable.strings。
               ✅ 外挂语言包**能**翻译这一类。
 
@@ -19,6 +20,13 @@ r"""衡量「外挂语言包」方案的真实覆盖上限。
               SwiftUI 对 String 是按原样渲染的，**不查表**。
               ❌ 外挂语言包翻不了，只有改源码重新编译才行。
               这是外挂方案的能力边界，不是语言包漏了词条。
+
+              注意：**用 String 形参的辅助函数**也属于这一类，而且最容易被漏掉 ——
+                control("Angle", …)          func control(_ title: String, …) { Text(title) }
+                slider(…, help: "…")         func slider(…, help: String)   { .help(help) }
+              上游大量面板（Camera Raw、滤镜、色阶）都走这种写法，所以那些
+              标签与提示语**在语言包里放了也没用**。已实测：源码里没有任何
+              `LocalizedStringKey` 声明，即所有辅助函数的文案形参都是 String。
 
 关于字符串插值（很重要）：
     源码里写 Text("Close \(tab.title)") 时，SwiftUI 运行时查的 key
@@ -41,6 +49,16 @@ r"""衡量「外挂语言包」方案的真实覆盖上限。
     早先用「骨架匹配」（只看占位符位置）会把格式符类型/序号写错的条目
     也判成已覆盖，属于假阳性 —— 那正是「有些文案明明有译文却还显示英文」的根因，
     已废弃。
+
+关于三元表达式（容易判错，也是 swiftc 探针实测的）：
+    Text(flag ? "Alpha" : "Beta")        两个分支都是 A 类，都能翻
+    Text(flag ? "A \\(n) px" : "Beta")    同上，插值分支的 key 是 "A %lld px"
+    Text(cond ? "Alpha" : someVar)       整个三元塌成 String，一支都翻不了
+    Text(x ?? "Untitled")                同上（?? 不是三元，结果是 String）
+    Text("A" + "B")                      同上（拼接先塌成 String）
+
+    判定规则：**所有**分支都是字面量的三元（可嵌套）才算 A 类；
+    只要有一支不是，整条表达式就是 B 类。见 literal_ternary_branches()。
 
 输出：
     build/coverage.json    机器可读
@@ -70,7 +88,8 @@ SKEL = "\x00"   # 骨架里代表「一个占位符 / 一个插值」的标记
 VIEW_CALLS = (
     "Text", "Label", "Button", "Menu", "Toggle", "Picker", "Link", "Section",
     "NavigationLink", "SecureField", "TextField", "Tab", "Group", "CommandMenu",
-    "CommandGroup", "WindowGroup", "MenuBarExtra", "Sidebar", "ContentUnavailableView",
+    "CommandGroup", "Window", "WindowGroup", "MenuBarExtra", "Sidebar",
+    "ContentUnavailableView",
 )
 MODIFIERS = (
     "navigationTitle", "navigationSubtitle", "help", "accessibilityLabel",
@@ -178,14 +197,17 @@ def guess_types(expr):
     e = expr.strip()
     if not e:
         return ["%lld"]
+    # .formatted() 必须最先判：它**永远**返回 String（%@），哪怕前面挂着类型转换。
+    # 典型反例 `Double(grid.step).formatted(...)`：以 `Double(` 开头，若按前缀匹配
+    # 会算成 %lf，于是算出的 key 跟运行时对不上，把一条本来已覆盖的文案误报成缺口。
+    if ".formatted(" in e:
+        return ["%@"]
     if re.match(r"^(?:%s)\s*\(" % "|".join(INT_TYPES), e):
         return ["%lld"]
     if re.match(r"^(?:%s)\s*\(" % "|".join(FLOAT_TYPES), e):
         return ["%lf"]
     if ".rounded()" in e:
         return ["%lf"]          # 没被 Int() 包住的取整结果仍是浮点
-    if ".formatted(" in e:      # formatted() 返回 String
-        return ["%@"]
     if (".description" in e or ".lastPathComponent" in e or ".rawValue" in e
             or ".title" in e or ".name" in e or ".names" in e
             or ".label" in e or ".localizedDescription" in e):
@@ -245,6 +267,105 @@ def key_variants(content):
         for ph in combo:
             k = k.replace(SKEL, ph, 1)
         out.append(k)
+    return out
+
+
+# ---------------------------------------------------------------- 三元字面量
+# swiftc 探针实测（macOS 27 / Swift 6.4，用 Mirror 反射内部 key 字段）：
+#
+#   Text(flag ? "Alpha" : "Beta")        -> 两个分支都能翻，key 分别是 Alpha / Beta
+#   Text(flag ? "A \(n) px" : "Beta")    -> 同上，插值分支的 key 是 "A %lld px"
+#   Text(cond ? "Alpha" : someVar)       -> 整个三元是 String，**编译不过** LocalizedStringKey
+#                                           参数，所以翻不了
+#   Text(x ?? "Untitled")                -> 同上，翻不了
+#   Text("A" + "B")                      -> 同上，翻不了
+#
+# 结论：**所有**分支都是字面量的三元（可嵌套）才是 A 类；只要有一支不是，
+# 整个表达式就塌成 String，全部分支都翻不了。
+# 这段判定以前缺失，导致 44 条本来能翻的文案被算进 B 类 —— 既低估了覆盖率，
+# 也让这些文案少了回归保护。
+
+
+def _skip_string(t, i):
+    """t[i] 是引号，返回字符串字面量结束后的下标。"""
+    quote = t[i]
+    i += 1
+    while i < len(t):
+        if t[i] == "\\":
+            i += 2
+            continue
+        if t[i] == quote:
+            return i + 1
+        i += 1
+    return i
+
+
+def _find_ternary(expr):
+    """找顶层的 `条件 ? A : B`，返回 (问号下标, 冒号下标)；找不到返回 None。
+
+    跳过字符串字面量与 () [] {} 内部；`??`（nil 合并）不是三元，显式跳开。
+    """
+    depth = 0
+    i = 0
+    n = len(expr)
+    while i < n:
+        c = expr[i]
+        if c == '"':
+            i = _skip_string(expr, i)
+            continue
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        elif c == "?" and depth == 0:
+            if i + 1 < n and expr[i + 1] == "?":
+                i += 2
+                continue
+            j = i + 1
+            d2 = 0
+            nested = 0
+            while j < n:
+                cj = expr[j]
+                if cj == '"':
+                    j = _skip_string(expr, j)
+                    continue
+                if cj in "([{":
+                    d2 += 1
+                elif cj in ")]}":
+                    d2 -= 1
+                elif cj == "?" and d2 == 0:
+                    if j + 1 < n and expr[j + 1] == "?":
+                        j += 2
+                        continue
+                    nested += 1
+                elif cj == ":" and d2 == 0:
+                    if nested == 0:
+                        return i, j
+                    nested -= 1
+                j += 1
+            return None
+        i += 1
+    return None
+
+
+def literal_ternary_branches(expr):
+    """expr 若是「每个分支都是字符串字面量」的三元，返回各分支的文案内容。
+
+    否则返回 None（说明它是真 B 类，外挂翻不了）。
+    """
+    hit = _find_ternary(expr)
+    if not hit:
+        return None
+    q, c = hit
+    out = []
+    for part in (expr[q + 1:c].strip(), expr[c + 1:].strip()):
+        if LIT.match(part):
+            out.append(unescape(part[1:-1]))
+            continue
+        sub = literal_ternary_branches(part)
+        if sub is None:
+            return None
+        out += sub
     return out
 
 
@@ -327,6 +448,7 @@ def main():
 
     a_lit, b_nonlit = {}, {}
     sites = 0
+    tern_sites = 0
     for dirpath, dirnames, filenames in os.walk(args.src):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
         for fn in sorted(filenames):
@@ -351,6 +473,13 @@ def main():
                         content = raw[1:-1]
                         key = unescape(content)
                         a_lit.setdefault(key, []).append(f"{rel}:{ln}")
+                        continue
+                    # 三元：每个分支都是字面量时，各分支都是 A 类文案
+                    branches = literal_ternary_branches(raw)
+                    if branches is not None:
+                        tern_sites += 1
+                        for key in branches:
+                            a_lit.setdefault(key, []).append(f"{rel}:{ln}")
                     else:
                         b_nonlit.setdefault(raw, []).append(f"{rel}:{ln}")
 
@@ -381,6 +510,7 @@ def main():
     report = {
         "source_dir": args.src,
         "localized_sites": sites,
+        "ternary_sites": tern_sites,
         "translatable": {
             "distinct_strings": len(a_lit),
             "covered": len(covered),
@@ -408,7 +538,8 @@ def main():
 
     print(f"源码扫描目录            : {args.src}")
     print(f"语言包                  : {len(keys)} 条")
-    print(f"本地化位置调用点        : {sites}")
+    print(f"本地化位置调用点        : {sites}"
+          f"（其中 {tern_sites} 处是三元，分支都算 A 类）")
     print("")
     print(f"A 类（外挂能翻）        : {len(a_lit)} 个不同文案")
     print(f"  已有译文              : {len(covered)}")

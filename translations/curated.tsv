@@ -1,12 +1,23 @@
 # Compositor 简体中文 — 人工校对译文
 # 格式：key <TAB> 译文   （# 开头与空行忽略）
 #
-# 这一批是「外挂语言包覆盖不到、必须靠本地化补丁才生效」的词条：
-#   A 组：补丁引入的 LF() 格式串（含占位符，占位符必须与 key 一一对应）
-#   B 组：组件调用点传入的文案（补丁后开始走查表）
-#   C 组：枚举显示值（rawValue 直接进 UI）
+# 这是「术语表 / LLM 都定不了、必须人工拍板」的译文表，优先级最高：
+# translate_missing.py 不会覆盖这里已有的 key，merge_translations.py 会把它合并进语言包。
+#
+# 注意（很重要，别被历史分组误导）：
+#   **只有「字面量直传本地化位置」的 key 才会真正生效。** 调用点写成
+#   Text(var) / .help(helper(...)) / NSMenuItem(title: ...) 这类「String 进视图」
+#   的写法，SwiftUI 不查表，语言包里放了也没用 —— 需要改上游源码才行。
+#   下面的 A/B/C 分组是早期「本地化补丁」方案留下的痕迹，补丁路线已废弃，
+#   因此分组里有一部分条目目前**不会显示**（在语言包中属于「查不到的死条目」）。
+#   哪些 key 真正可达，用 `python3 scripts/tools/analyze_coverage.py _upstream` 看。
 #
 # 术语遵循 Adobe Photoshop 简体中文版习惯。
+
+# ===== v1.4.7：上游改名与新增 =====
+Search Commands…	搜索命令…
+Toggle Fullscreen	切换全屏
+Compositor	Compositor
 
 # ===== A 组：LF() 格式串 =====
 Undo %@	撤销 %@
@@ -83,9 +94,7 @@ Drag to draw a shape on a new layer · Shift %@ · Option from center · Shift-U
 
 # ===== B 组：组件调用点文案 =====
 1 more tab	还有 1 个标签页
-Canvas Only: full screen on black, without panels	仅画布：在黑色背景上全屏显示，隐藏所有面板
 Click to select; double-click to edit; Option-drag to copy 	点击选择；双击编辑；按住 Option 拖动可复制 
-Command Palette	命令面板
 Move / Transform	移动 / 变换
 Spot Healing Brush	污点修复画笔
 Layer › Add Layer Mask	图层 › 添加图层蒙版

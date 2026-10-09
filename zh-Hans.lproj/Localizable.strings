@@ -1,30 +1,47 @@
 /*
  * Localizable.strings — Compositor 简体中文语言包
- * 目标版本：Compositor v1.4.6（上游 robbietilton/Compositor，MIT）
+ * 目标版本：Compositor v1.4.7（上游 robbietilton/Compositor，MIT）
  *
  * 词条来源：
  *   [A] skyecx/compositor-zh-hans 语言包（术语对齐 Adobe Photoshop 简体中文版）
  *   [B] 上游 PR #223 的 String Catalog（Xcode 从真实构建提取，广度可信）
  *   [C] 手工补充：经源码逐个确认走 LocalizedStringKey 查表的文案
  *
- * 合计 1253 条。
+ * 合计 1252 条。
  * 校验：plutil -lint
- *       + tools/check-strings.py（占位符一致性）
- *       + tools/verify_keys.py （key 与 SwiftUI 运行时精确对齐，见下）
+ *       + tools/check-strings.py        （占位符一致性、key 禁带序号）
+ *       + tools/analyze_coverage.py     （key 与 SwiftUI 运行时精确对齐，见下）
+ *       + tools/check-coverage-gap.py   （缺口门禁，CI 与自检共用同一份）
  *
  * ⚠️ key 里绝不允许出现 %1$@ 这种带序号的格式符。
  *
  *    SwiftUI 的 LocalizedStringKey 在运行时**只生成不带序号**的格式符。
- *    用 swiftc 反射 SwiftUI 内部 key 实测确认：
- *        "Close \(s)"                    -> "Close %@"
- *        "Current: \(w) × \(h) pixels"   -> "Current: %lld × %lld pixels"   (Int)
- *        "\(d) px"                       -> "%lf px"                         (Double)
+ *    用 swiftc 反射 SwiftUI 内部 key 实测确认（macOS 27 / Swift 6.4）：
+ *        "Close \(s)"                    -> "Close %@"                        (String)
+ *        "Current: \(w) × \(h) pixels"   -> "Current: %lld × %lld pixels"    (Int)
+ *        "\(d) px"                       -> "%lf px"                          (Double)
  *    也就是说 key 永远长不成 "%1$@ × %2$@" 的样子 —— 带序号的 key 是
  *    **死条目**，运行时查不到，译文再对也不会显示。
  *
  *    序号（%1$@）只允许出现在**译文**里，用来重排参数顺序，例如
  *        "%@ of %@." = "%2$@的%1$@。"
- *    这条规则由 tools/verify_keys.py 和 selfcheck.sh 第 11 项把关。
+ *    这条规则由 tools/check-strings.py（第 7、8 条）和 selfcheck.sh 第 4 项把关。
+ *
+ * ⚠️ 还有两条同样要命的实测规则（漏了就是「明明有译文却显示英文」）：
+ *
+ *    1. .formatted() **永远**返回 String，所以
+ *         "\(Double(x).formatted())" -> "%@"    而不是 %lf
+ *
+ *    2. 三元是**逐分支**判定的：
+ *         Text(flag ? "Alpha" : "Beta")     两个分支各自都是字面量 → 都能翻
+ *         Text(cond ? "Alpha" : someVar)    整个三元塌成 String → 一个都翻不了
+ *       同理 `x ?? "Untitled"` 与 `"A" + "B"` 也都翻不了。
+ *
+ * ⚠️ 本文件里有一部分 key 在当前上游源码中**查不到**（属于死条目），不算漏翻：
+ *    调用点写成 Text(var) / .help(helper(…)) / NSMenuItem(title: …) 这类
+ *    「String 进视图」形式时，SwiftUI 根本不查表；上游源码里没有任何
+ *    `LocalizedStringKey` 声明，所以所有辅助函数的文案形参都是 String。
+ *    哪些 key 真正可达：`python3 scripts/tools/analyze_coverage.py _upstream`
  */
 
 /* ===== [A] 原语言包词条 ===== */
@@ -1205,16 +1222,23 @@
 "square" = "正方形";
 "°" = "°";
 
-/* ===== [C] 手工补充（v1.4.6 新增文案） ===== */
+/* ===== [C] 手工补充（v1.4.6 起新增文案） ===== */
 
 "Add layer effect" = "添加图层效果";
-"Canvas Only (F)" = "仅画布 (F)";
-"Command Palette…" = "命令面板…";
 "Importing…" = "正在导入…";
 "No commands match" = "没有匹配的命令";
 "Rotate Canvas 90° Clockwise" = "顺时针旋转画布 90°";
 "Rotate Canvas 90° Counterclockwise" = "逆时针旋转画布 90°";
 "Search commands and tools" = "搜索命令和工具";
+
+/* v1.4.7：上游把命令面板与全屏两项改了名，语言包跟着改名。
+   注意菜单键位（⌘F / F）由上游的 keyboardShortcut 提供，标题里不带 (F)。 */
+"Search Commands…" = "搜索命令…";
+"Toggle Fullscreen" = "切换全屏";
+
+/* v1.4.7：Window 的标题也是本地化位置（源码 Window("Compositor", id:)）。
+   应用名保持英文，这里显式登记成恒等译文，免得被当成漏翻。 */
+"Compositor" = "Compositor";
 
 /* ===== 后续补充 ===== */
 "%@ canvas" = "%@画布";
@@ -1228,11 +1252,9 @@
 "Bayer 2 × 2" = "Bayer 2 × 2";
 "Bayer 4 × 4" = "Bayer 4 × 4";
 "Bayer 8 × 8" = "Bayer 8 × 8";
-"Canvas Only: full screen on black, without panels" = "仅画布：在黑色背景上全屏显示，隐藏所有面板";
 "Click to select; double-click to edit; Option-drag to copy" = "点击选择；双击编辑；按住 Option 拖动可复制 ";
 "Clipped to %@" = "已裁剪至 %@";
 "Clipping mask based on %@. Option-click the bottom of its row to release." = "基于 %@ 的剪贴蒙版。按住 Option 点击其行底部可释放。";
-"Command Palette" = "命令面板";
 "Edit %@ Adjustment" = "编辑%@调整";
 "Enter a size up to %@ pixels at this DPI." = "在此 DPI 下输入最大 %@ 像素的尺寸。";
 "Enter whole numbers from 1 to %@ pixels." = "请输入 1 到 %@ 之间的整数像素值。";

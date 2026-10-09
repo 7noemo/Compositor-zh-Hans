@@ -50,8 +50,11 @@ EV
 Editor
 Values
 
-# ---- 命令面板要跳过的系统菜单名（是 Swift 里做字符串比较用的，不进 UI）----
-Command Palette…
+# ---- 命令面板里「不算命令」的系统菜单名（Swift 里做字符串比较用，不进 UI）----
+# v1.4.7 起上游已把 "Command Palette…" 全部换成 "Search Commands…"，旧的可以删了。
+# ⚠️ "Search Commands…" **不能**列进本清单 —— 它同时是「搜索命令…」菜单项的
+#    真实标题（Button("Search Commands…")），列进来会被当成噪音跳过而不翻译。
+#    "Window" / "Help" / "Services" 由系统菜单提供，语言包本来也管不到，不必列。
 
 # ---- 单位与通道名（中文版同样保留英文）----
 px
@@ -89,3 +92,23 @@ R —   G —   B —
 Tool › 
 Select 
 Compositor
+
+# ---- UI 上确实出现、但源码写法让语言包查不到的（**不是漏翻**）----
+# 调用点属于 Text(var) / Button(String) / .help(helper(…)) /
+# NSMenuItem(title:) / NSAlert.messageText 这几类 —— SwiftUI 不查表。
+# 列在这里只是为了让每轮 state/pending/ 不被这些已知项刷屏；
+# 哪天上游把文案挪到字面量位置，删掉对应行即可（覆盖率门禁会先报警）。
+%lld DPI
+) · Option from center · Shift-U or Tab for the next shape · Escape cancel · Space to pan
+)” was changed on disk.
+Drag to draw a shape on a new layer · Shift %@
+Last Filter
+Last Filter:
+Properties
+R %@   G %@   B %@
+Save changes to %@
+Search Commands
+Select %@
+Toggle Fullscreen: the canvas alone on black (Esc also leaves)
+levels%@
+· %lld DPI: %@ × %@ pixels

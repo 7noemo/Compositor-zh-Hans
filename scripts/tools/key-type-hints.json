@@ -1,7 +1,10 @@
 {
-  "_doc": "插值文案的真实格式符表。SwiftUI 的 LocalizedStringKey 会把插值换成格式符当 key：String->%@，Int->%lld，Double/CGFloat->%lf，且**永远不带序号**。analyze_coverage.py / verify_keys.py 优先读这里，读不到才去猜。每条都对着 v1.4.6 源码逐个核过；上游改了文案时，selfcheck.sh 会提示这里多出来/对不上。",
-  "_version": "v1.4.6",
+  "_doc": "插值文案的真实格式符表。SwiftUI 的 LocalizedStringKey 会把插值换成格式符当 key：String->%@，Int->%lld，Double/CGFloat->%lf（但 .formatted() 永远返回 String，即 %@），且**永远不带序号**。analyze_coverage.py 优先读这里，读不到才靠 guess_types 猜。每条都对着 v1.4.7 源码逐个核过类型；上游改了文案时，selfcheck.sh 与 check-coverage-gap.py 会提示这里多出来/对不上。",
+  "_version": "v1.4.7",
   "types": {
+    "A subdivision every \\(Double(grid.step).formatted(.number.precision(.fractionLength(0...2)))) pixels.": [
+      "%@"
+    ],
     "Choose the \\(title.lowercased()) color": [
       "%@"
     ],
@@ -25,10 +28,22 @@
     "Edit \\(CameraRawMixerSettings.names[index]).": [
       "%@"
     ],
+    "Enter a size up to \\(DocumentLimits.maxSide.formatted()) pixels at this DPI.": [
+      "%@"
+    ],
     "Enter a whole number from 1 to \\(maximum) px.": [
       "%lld"
     ],
+    "Enter whole numbers from 1 to \\(DocumentLimits.maxSide.formatted()) pixels.": [
+      "%@"
+    ],
     "Final dimensions must be 1–\\(DocumentLimits.maxSide.formatted()) pixels per side.": [
+      "%@"
+    ],
+    "Hide \\(name)": [
+      "%@"
+    ],
+    "Hide \\(name) in the preview": [
       "%@"
     ],
     "In \\(Int((point.x * 255).rounded()))   Out \\(Int((point.y * 255).rounded()))": [
@@ -46,6 +61,32 @@
     ],
     "Original \\(settings.channel.rawValue) histogram": [
       "%@"
+    ],
+    "Redo \\(session.history.redoName)": [
+      "%@"
+    ],
+    "Result: \\(Int(width.rounded())) × \\(Int(height.rounded())) pixels": [
+      "%lld",
+      "%lld"
+    ],
+    "Show \\(name)": [
+      "%@"
+    ],
+    "Show \\(name) in the preview": [
+      "%@"
+    ],
+    "Undo \\(session.history.undoName)": [
+      "%@"
+    ],
+    "Use 1–\\(DocumentLimits.maxSide.formatted()) pixels per side, up to \\(DocumentLimits.maxSurfaceMegapixels) megapixels, and 1–9,600 pixels/inch.": [
+      "%@",
+      "%lld"
+    ],
+    "Use gridlines every \\(LayoutGrid.spacingRange.lowerBound)–\\(LayoutGrid.spacingRange.upperBound.formatted()) pixels and \\(LayoutGrid.subdivisionRange.lowerBound)–\\(LayoutGrid.subdivisionRange.upperBound) subdivisions, no more than the pixels between gridlines.": [
+      "%lld",
+      "%@",
+      "%lld",
+      "%lld"
     ],
     "Zoom in (⌘+), now \\(percent). At 100% each pixel of the JPEG is one pixel of the screen, as on the canvas": [
       "%@"

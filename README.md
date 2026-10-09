@@ -3,9 +3,9 @@
 **给 [Compositor](https://github.com/robbietilton/Compositor)（macOS 图像编辑器）用的外挂简体中文语言包。**
 双击一个脚本就能把界面变成中文，双击另一个就能完全还原。不编译、不打包、不修改任何可执行代码。
 
-[![语言包词条](https://img.shields.io/badge/语言包-1253_条-blue)](#能翻译到什么程度)
-[![可翻译文案覆盖](https://img.shields.io/badge/可翻译文案覆盖-99.5%25-brightgreen)](#能翻译到什么程度)
-[![上游](https://img.shields.io/badge/上游-v1.4.6-lightgrey)](https://github.com/robbietilton/Compositor/releases)
+[![语言包词条](https://img.shields.io/badge/语言包-1252_条-blue)](#能翻译到什么程度)
+[![可翻译文案覆盖](https://img.shields.io/badge/可翻译文案覆盖-99.6%25-brightgreen)](#能翻译到什么程度)
+[![上游](https://img.shields.io/badge/上游-v1.4.7-lightgrey)](https://github.com/robbietilton/Compositor/releases)
 [![许可证](https://img.shields.io/badge/许可证-MIT-green)](LICENSE)
 
 ---
@@ -239,14 +239,14 @@ codesign --force --sign - --deep /Applications/Compositor.app
 
 ### 实测数据
 
-对上游 v1.4.6 源码做的静态分析（用 `scripts/tools/analyze_coverage.py` 复现）：
+对上游 v1.4.7 源码做的静态分析（用 `scripts/tools/analyze_coverage.py` 复现）：
 
 | 类别 | 数量 | 外挂能翻吗 |
 | --- | --- | --- |
-| **A 类**：字面量直接写在本地化位置上<br><sub>`Text("Add Layer")`、`.help("Invert")`、`Label("New", systemImage: "plus")`</sub> | **423 个文案** | ✅ **能** |
-| **B 类**：变量 / 表达式出现在同一位置<br><sub>`Text(title)`、`.help(help)`、`Text($0.rawValue)`</sub> | 205 处 / 95 种写法 | ❌ **不能** |
+| **A 类**：字面量直接写在本地化位置上<br><sub>`Text("Add Layer")`、`.help("Invert")`、`Label("New", systemImage: "plus")`、<br>`.help(cond ? "Add mask" : "Remove mask")`</sub> | **482 个文案** | ✅ **能** |
+| **B 类**：变量 / 表达式出现在同一位置<br><sub>`Text(title)`、`.help(help)`、`Text($0.rawValue)`</sub> | 176 处 / 67 种写法 | ❌ **不能** |
 
-语言包 1253 条词条，对 A 类覆盖 **421 / 423 = 99.5%**
+语言包 1252 条词条，对 A 类覆盖 **480 / 482 = 99.6%**
 （剩下两个是空串和 `·`，本来就不该翻）。
 
 这个数字是**精确核对**出来的，不是「差不多对上了」：工具会把每条源码文案按
@@ -254,23 +254,31 @@ SwiftUI 的运行时规则算成真实 key（`"Close \(x)"` → `Close %@`），
 要求语言包里逐字符存在。CI 里 `scripts/tools/check-coverage-gap.py` 会在
 缺口里出现任何一条**带实际内容**的文案时直接失败，不让它悄悄溜过去。
 
-> **关于插值文案（27 条，也是最容易出错的一类）**
+> **关于插值文案（39 条，也是最容易出错的一类）**
 >
 > 源码里写 `Text("Close \(tab.title)")`，运行时 SwiftUI 查的 key **不是**
 > 那串源码，而是把插值换成格式符后的 `Close %@`。所以语言包里存的是
 > `"Close %@" = "关闭 %@"` —— key 长得怪不是乱写，是 SwiftUI 就这么查。
 >
-> 两条实测规则（用 `swiftc` 反射 SwiftUI 内部的 key 得到，见
+> 三条实测规则（用 `swiftc` 反射 SwiftUI 内部的 key 得到，见
 > `zh-Hans.lproj/Localizable.strings` 文件头）：
 >
 > 1. **格式符只由类型决定**：`String` → `%@`，`Int` → `%lld`，`Double` → `%lf`。
+>    但 `.formatted()` 例外 —— 它**永远**返回 `String`，所以
+>    `\(Double(x).formatted())` 是 `%@` 而不是 `%lf`。
 > 2. **永远不带序号** —— 不会有 `%1$@ × %2$@` 这种 key。
+> 3. **三元是逐分支判定的**：`Text(flag ? "Alpha" : "Beta")` 两个分支各自都能翻；
+>    但只要有一支是变量（`cond ? "A" : someVar`），整个三元就塌成 `String`，
+>    一支都翻不了。`x ?? "Untitled"` 和 `"A" + "B"` 同理 —— 都翻不了。
 >
 > 第 2 条踩过坑：语言包里曾有一批从别处抄来的 `"%1$@ × %2$@ px"` 形式的 key，
 > 译文写得好好的，**运行时却永远查不到**，因为 SwiftUI 根本生成不出带序号的 key。
 > 这类「死条目」已全部改掉；序号现在只允许出现在**译文**里，用来重排参数
 > （`"%@ of %@." = "%2$@的%1$@。"`）。规则由 `check-strings.py` 第 7 条和
 > `selfcheck.sh` 第 4 项把守。
+>
+> 第 3 条是 v1.4.7 这一轮补上的：早期版本的分析器不认识三元，把它整个算成 B 类，
+> 于是有 44 条本来能翻的文案被排除在统计之外（既低估覆盖率，也少了一层回归保护）。
 
 ### 为什么有些地方还是英文
 
@@ -289,9 +297,31 @@ Text(verbatim: name) // 显式声明「不要翻译」
 `name` 里就算存着 `"Add Layer"`，语言包里也有这条译文，**它也不会去查** ——
 因为查不查表在**编译期**就由参数类型决定好了，运行时改不了。
 
-要翻译这 205 处，只有一条路：**改源码，把它们包一层查表助手，然后重新编译整个 app**。
+要翻译这 176 处，只有一条路：**改源码，把它们包一层查表助手，然后重新编译整个 app**。
 那是另一个项目要做的事（需要完整 Xcode 和一个 macOS 26 的构建环境），
 不在「外挂语言包」的能力范围内。
+
+#### 还有一种最容易看走眼的：用 `String` 形参的辅助函数
+
+上面那种是「一个变量进视图」，一眼能看出翻不了。真正容易误判的是**辅助函数**：
+
+```swift
+private func control(_ title: String, …) -> some View {
+    Text(title)          // title 是 String → 不查表
+}
+
+control("Angle", …)      // 调用点写的是字面量，但类型是 String → 照样翻不了
+```
+
+调用点看着是字面量，`extract_strings.py` 也会把它扫出来，于是很容易被当成
+「能翻的」而写进语言包。但**语言包里放了也没用** —— 整个上游源码里没有任何一处
+`LocalizedStringKey` 声明，也就是说所有辅助函数的文案形参都是 `String`。
+
+受影响最大的是**滤镜 / 调整面板与 Camera Raw 面板**：那里的滑块标题
+（`Exposure`、`Reds`、`Angle`、`Amount`、`Feather`…）和它们的长段说明文字，全部
+通过 `control(_ title: String, …)` / `slider(…, help: String)` 这类形参传入。
+结论：**这部分文案目前在语言包里是「查不到的死条目」**，不是漏翻。
+（用 `python3 scripts/tools/analyze_coverage.py _upstream` 看哪些 key 真正可达。）
 
 **实际观感**：绝大多数界面（菜单、面板标题、工具栏提示、对话框、设置）都是中文。
 仍有英文残留的地方主要是这几块，**全是 B 类，不是漏翻**：
@@ -311,6 +341,10 @@ Text(verbatim: name) // 显式声明「不要翻译」
   查到了也只会把英文 rawValue 填进去。所以同一个「图像」菜单里
   `曲线… / 色阶… / 色相/饱和度… / 反相` 是中文（字面量写法），其余是英文（rawValue 写法）
 - 选项栏上的 `Expand` / `Contract`（按钮标题来自函数参数 `Button(title)`）
+- **滤镜 / 调整面板与 Camera Raw 面板的滑块标题与说明文字**
+  （`Exposure`、`Reds`、`Angle`、`Amount`、`Feather`…）：源码走
+  `control(_ title: String, …)` / `slider(…, help: String)`，形参是 `String`，
+  详见上一节 —— 这一类数量最多，也最容易误判
 - 命令面板（⇧⌘P）里部分条目的名字
 
 <details>
@@ -323,6 +357,7 @@ Text(verbatim: name) // 显式声明「不要翻译」
 | 调整图层菜单 | `Compositor/Document/LayerAdjustment.swift`：`case curves = "Curves"` + `Text(kind.rawValue)` | 同上，rawValue 直传；且枚举值还要编码进文档文件，动了会坏兼容性 |
 | 图像/滤镜菜单条目 | `Compositor/CompositorApp.swift`：`Button("\(kind.rawValue)…")` | 查表 key 是 `%@…`，插进去的内容仍是英文 rawValue |
 | Expand/Contract 按钮 | `Compositor/UI/LassoControls.swift`：`modifyControl("Expand", …)` → `Button(title)` | `title` 是 `String` 参数，`Button(String)` 不查表 |
+| 滤镜 / Camera Raw 面板 | `Compositor/UI/FilterSheet.swift`：`control(_ title: String, …)` → `Text(title)`；<br>`CameraRawControls.swift`：`slider(…, help: String)` → `.help(help)` | 同上；上游源码里没有任何 `LocalizedStringKey` 声明，所以这类形参一律是 `String` |
 
 这些枚举的 rawValue 同时还是**文档格式的编码值**（`Codable`），就算改源码也得保持
 rawValue 不变、另配 displayName —— 这也是外挂方案碰都不去碰它们的原因。
@@ -451,7 +486,7 @@ mv ~/Library/Application\ Support/CompositorHanhua ~/.Trash/
 <details>
 <summary><b>工具选项栏的 Rectangle/Ellipse、混合模式的 Normal/Multiply、部分菜单条目还是英文</b></summary>
 
-这些**不是漏翻，是外挂语言包翻不了的那一类**（B 类，约 205 处）。
+这些**不是漏翻，是外挂语言包翻不了的那一类**（B 类，约 176 处）。
 上面「能翻译到什么程度」一节有完整清单和源码位置。要点：SwiftUI 只对
 **编译期写死的字面量**查表；枚举的 `rawValue`、函数参数传进来的标题都是
 运行时变量，走原样渲染，永远不会查语言包。
@@ -586,7 +621,7 @@ SwiftUI 查表用的是**运行时算出来的 key**，不是源码里那串字�
 ```
 Compositor-zh-Hans/
 ├── zh-Hans.lproj/
-│   └── Localizable.strings          语言包本体（唯一的核心资产，1253 条）
+│   └── Localizable.strings          语言包本体（唯一的核心资产，1252 条）
 ├── 一键安装语言包.command             面向使用者的双击入口（薄壳）
 │                                     └ Release 附件里叫 install-zh-Hans.command
 ├── 一键还原官方版.command             同上
@@ -628,7 +663,7 @@ Compositor-zh-Hans/
 
 ```bash
 # 拉一份上游源码（只为扫文案，不编译）
-bash scripts/fetch-upstream.sh v1.4.6
+bash scripts/fetch-upstream.sh v1.4.7
 
 # 看「外挂到底能翻多少」——这是最该关注的那个数字（精确匹配口径）
 python3 scripts/tools/analyze_coverage.py _upstream --json build/coverage.json
@@ -686,7 +721,7 @@ git add -A && git commit -m '设置仓库地址' && git push
 **① macOS 的 bash 是 3.2，会把 `$VAR` 后面紧跟的中文吞进变量名**
 
 ```bash
-APP_VER="1.4.6"
+APP_VER="1.4.7"
 echo "版本：$APP_VER（已汉化）"     # ❌ 变量名被解析成 "APP_VER（" → unbound variable
 echo "版本：${APP_VER}（已汉化）"   # ✅
 ```
