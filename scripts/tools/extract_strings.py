@@ -9,8 +9,14 @@
   * 额外排除 Swift 标识符、PSD 格式常量、SF Symbol 名等噪音。
 
 输出：
-  build/to-translate.tsv   待译词条（key <TAB> 来源位置），人工/AI 填第二列
-  build/already-covered.txt 已在语言包中的
+  build/to-translate.tsv              待译词条（key <TAB> 空 <TAB> 来源位置）
+  build/single-token-candidates.txt   单词型候选，需人工甄别
+  build/stats.json                    给 CI / README 用的机器可读统计
+
+注意这里走的是**全量口径**：分母里混着 PSD 常量、源码片段等噪音，
+它回答的是「有没有漏网的字面量」，不是「外挂能翻多少」。
+要看真实成绩用 analyze_coverage.py；要补译文时 translate_missing.py 会
+按 analyze_coverage 的结论只保留 A 类（详见那里的说明）。
 """
 import json
 import os
@@ -193,7 +199,12 @@ def main():
                     elif SHORT_TOKEN.match(lit) and lit not in keys:
                         tokens.setdefault(lit, f"{rel}:{lineno}")
 
-    todo = {}
+    # todo_lits 是**给人看的口径**：有多少条文案没翻（一条算一条）。
+    # todo 是**给程序用的口径**：语言包里该写哪些 key —— 一条插值文案可能
+    # 因为格式符不确定而展开成好几个 key，所以 todo 通常比 todo_lits 多。
+    # 两个数都报出来，免得「仍需人工确认 156 条」这种被变体灌过水的数字
+    # 被当成真的还有 156 条文案没翻（实际只有 97 条）。
+    todo_lits = {}
     covered = []
     for k, where in found.items():
         if covered_by(k):
@@ -201,18 +212,21 @@ def main():
         else:
             # 待翻译列表里给出「语言包应该加的 key 形式」：
             # 插值文案要写成 Close %@，而不是 Close \(tab.title)。
-            #
-            # 2026-10-10 起把**全部候选**都列出来，而不是只列第一个：
-            # 源码里看不出插值是 String / Int / Double 时，guess_types 会给
-            # 两三个候选（如 ["%@", "%lld", "%lf"]）。以前只写第一个，
-            # 一旦真实类型不是它，运行时查表就落空 —— 而覆盖率检查是按
-            # 「任一候选命中即算覆盖」判定的，**会把这个缺口放过去**
-            # （v1.4.9 的 `\(percent)%` 就是这样：真实是 String 的 %@%，
-            #  语言包里却存着猜出来的 %lld%）。
-            # 全写上就与类型无关了，代价只是语言包多几条查不到的条目 ——
-            # 而这个语言包本来就有大量死条目（见 README），不差这几条。
-            for variant in key_variants(k):
-                todo[variant] = where
+            todo_lits[k] = where
+
+    todo = {}
+    for lit, where in todo_lits.items():
+        # 2026-10-10 起把**全部候选**都列出来，而不是只列第一个：
+        # 源码里看不出插值是 String / Int / Double 时，guess_types 会给
+        # 两三个候选（如 ["%@", "%lld", "%lf"]）。以前只写第一个，
+        # 一旦真实类型不是它，运行时查表就落空 —— 而覆盖率检查是按
+        # 「任一候选命中即算覆盖」判定的，**会把这个缺口放过去**
+        # （v1.4.9 的 `\(percent)%` 就是这样：真实是 String 的 %@%，
+        #  语言包里却存着猜出来的 %lld%）。
+        # 全写上就与类型无关了，代价只是语言包多几条查不到的条目 ——
+        # 而这个语言包本来就有大量死条目（见 README），不差这几条。
+        for variant in key_variants(lit):
+            todo[variant] = where
 
     os.makedirs(OUT_DIR, exist_ok=True)
     with open(os.path.join(OUT_DIR, "to-translate.tsv"), "w", encoding="utf-8") as fh:
@@ -232,7 +246,8 @@ def main():
             "strings_total": len(keys),
             "found": len(found),
             "covered": len(covered),
-            "todo": len(todo),
+            "todo": len(todo_lits),
+            "todo_keys": len(todo),
             "single_tokens": len(tokens),
             "coverage_percent": pct,
         }, fh, ensure_ascii=False, indent=2)
@@ -242,7 +257,8 @@ def main():
     print(f"语言包                : {len(keys)} 条")
     print(f"扫到疑似 UI 文案      : {len(found)}")
     print(f"  其中已在语言包        : {len(covered)}")
-    print(f"❗ 待翻译（含空格/短语）: {len(todo)}   -> build/to-translate.tsv")
+    print(f"❗ 待翻译（含空格/短语）: {len(todo_lits)} 条文案"
+          f"（展开成 {len(todo)} 个语言包 key）   -> build/to-translate.tsv")
     print(f"❔ 单词型待甄别        : {len(tokens)}   -> build/single-token-candidates.txt")
     print()
     print("覆盖率: %.1f%%" % pct)
