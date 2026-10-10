@@ -16,12 +16,21 @@
     "untranslatable_expressions": 68,
     "scan_found": 1209,
     "scan_covered": 1092,
-    "scan_todo": 156,
+    "scan_todo": 117,
     "scan_coverage_percent": 90.3,
     "last_sync": "2026-10-10",
     "last_release": "lang-v1.4.9"
   },
   "history": [
+    {
+      "tag": "v1.4.9",
+      "version": "1.4.9",
+      "synced_at": "2026-10-10",
+      "strings_total": 1269,
+      "coverage_percent": 99.4,
+      "release_tag": "lang-v1.4.9",
+      "note": "手动强制同步"
+    },
     {
       "tag": "v1.4.9",
       "version": "1.4.9",
