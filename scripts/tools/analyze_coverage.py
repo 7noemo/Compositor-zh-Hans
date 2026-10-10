@@ -524,6 +524,12 @@ def main():
             "note": "变量/表达式进视图 —— SwiftUI 原样渲染不查表，外挂翻不了，需改源码",
         },
         "missing_keys": sorted(missing),
+        # 本轮扫到的**全部** A 类文案原文（含插值写法，如 `Close \(tab.title)`）。
+        # 两个下游要用：
+        #   * tools/sync_hints.py   —— 判断提示表哪些条目已失效、哪些新文案还没登记
+        #   * tools/prune-obsolete.py —— 与上一轮快照对比，找出上游删掉/改名的 key
+        # 注意这里存的是**字面量原文**而不是算出来的 key：提示表就是按原文索引的。
+        "translatable_keys": sorted(a_lit),
         "matched_via_placeholder_key": {k: v for k, v in sorted(covered_via.items())},
         "type_incomplete": [
             {"literal": k, "matched": m, "also_consider": r}

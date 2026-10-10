@@ -69,7 +69,11 @@ New: %lld × %lld pixels · %@ uncompressed	新建：%lld × %lld 像素 · 未�
 In %lld   Out %lld	输入 %lld   输出 %lld
 Input %lld · Output %lld	输入 %lld · 输出 %lld
 %lld × %lld px	%lld × %lld 像素
-%@ × %@ px · sRGB	%@ × %@ 像素 · sRGB
+# 2026-10-10 失效：上游 v1.4.9 的 ExportAsSheet 把状态行改成
+# 「Transparency kept · sRGB / sRGB」两个纯字面量，%@ × %@ px 这种写法没有了。
+# 下面这条注释掉，交给 prune_obsolete.py 从语言包里清掉
+#（它会保护人工资产里的 key、不自动删，所以得由人先摘掉）。
+# %@ × %@ px · sRGB	%@ × %@ 像素 · sRGB
 %lld degrees	%lld 度
 %@ uncompressed RGBA canvas	未压缩 RGBA 画布 %@
 Close %@	关闭 %@
@@ -190,3 +194,37 @@ Magentas	洋红
 Transparent Pixels	透明像素
 Top Left Pixel Color	左上角像素颜色
 Bottom Right Pixel Color	右下角像素颜色
+
+# ===== v1.4.9：上游新增的「导出为」面板 / 扫描线滤镜 / 导航器 =====
+# 2026-10-10 手工补。上游把原来的 JPEGExportSheet 换成了统一的 ExportAsSheet
+# （所以 “Export JPEG” 这个 key 作废了），并给扫描线滤镜加了 6 个控件、
+# 改写了 Dots 的说明；另外给导航器加了开关项。
+# 注意：扫描线那 6 个**控件名**（Thickness / Displace / Smoothness / Threshold /
+# Color Split / Black Level）走的是 control(_ title: String, …) 辅助函数，
+# 属于 B 类，语言包翻不了 —— 只有下面这些 .help() 文案能翻。
+Export As	导出为
+Export As…	导出为…
+Format	格式
+Page	页面
+sRGB	sRGB
+Transparency kept · sRGB	保留透明度 · sRGB
+Width in pixels; the height follows, keeping the proportions	宽度（像素）；高度按比例跟随
+Height in pixels; the width follows, keeping the proportions	高度（像素）；宽度按比例跟随
+Scale the export: the document stays as it is	缩放导出结果：文档本身保持不变
+Navigator	导航器
+Navigator (300% and above)	导航器（300% 及以上）
+Click or drag to move the view	单击或拖动以移动视图
+How much of the gap a bright line fills; dimmer parts draw it thinner	亮线填充间隙的程度；较暗处线条画得更细
+Break the lines into beads where the picture is darker than this, blending into solid lines where it's brighter	画面暗于此处时线条断为颗粒，亮于此处则融合成实线
+Lift the lines where the picture is bright, or lower them when negative, so they swell into its shapes	画面明亮处抬高线条，负值则压低，使之随画面形状起伏
+How far the brightness is smoothed before it displaces the lines, from sharp ridges to rounded hills	亮度在推动线条前的平滑程度：从尖锐的山脊到圆润的丘陵
+Draw no line where the picture is darker than this, leaving the screen dark	画面暗于此处时不画线，该区域保持黑暗
+Move the red and blue apart, for colored fringes on the lines	分离红蓝通道，让线条带上彩色边缘
+Darker or lighter before the lines are drawn	绘制线条前的加深或减淡
+How bright the lines are where the picture is black, so they show even over black	画面全黑处线条的亮度，使其在黑色背景上依然可见
+Zoom in (⌘+), now %@. At 100% each pixel of the export is one pixel of the screen	放大（⌘+），当前 %@。在 100% 时，导出的每个像素对应屏幕的一个像素
+# 纯插值文案（源码 ExportAsSheet.swift:97 Button("\(percent)%")）。
+# percent 是 String 类型（同文件 :205），所以真实 key 是 %@% 而不是 %lld%。
+# 恒等译文：这条本来就没有需要翻译的词。
+%@%	%@%
+

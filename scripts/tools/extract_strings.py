@@ -21,7 +21,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 复用「插值 -> 格式串」的骨架匹配逻辑，避免把 Close \(tab.title) 这种
 # 明明已经译好的文案误报成待翻译（它在语言包里存的是 Close %@）。
-from analyze_coverage import key_variants, skeleton_of_key  # noqa: E402
+#
+# 注意要把提示表装进 analyze_coverage.HINTS —— key_variants() 优先查它。
+# 以前这里没有装载，于是 key_variants() 一律退回「猜」：虽然多数情况下
+# 猜出来的和人工核过的一样，但一旦不一致，这里给出的 key 形式就跟
+# 运行时对不上（v1.4.9 的 \(percent)% 就是这种）。
+from analyze_coverage import (HINTS, HINTS_PATH, key_variants,  # noqa: E402
+                              load_hints, skeleton_of_key)
+
+HINTS.clear()
+HINTS.update(load_hints(HINTS_PATH))
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DEFAULT_PACK = os.path.join(ROOT, "zh-Hans.lproj", "Localizable.strings")
@@ -192,7 +201,18 @@ def main():
         else:
             # 待翻译列表里给出「语言包应该加的 key 形式」：
             # 插值文案要写成 Close %@，而不是 Close \(tab.title)。
-            todo[key_variants(k)[0]] = where
+            #
+            # 2026-10-10 起把**全部候选**都列出来，而不是只列第一个：
+            # 源码里看不出插值是 String / Int / Double 时，guess_types 会给
+            # 两三个候选（如 ["%@", "%lld", "%lf"]）。以前只写第一个，
+            # 一旦真实类型不是它，运行时查表就落空 —— 而覆盖率检查是按
+            # 「任一候选命中即算覆盖」判定的，**会把这个缺口放过去**
+            # （v1.4.9 的 `\(percent)%` 就是这样：真实是 String 的 %@%，
+            #  语言包里却存着猜出来的 %lld%）。
+            # 全写上就与类型无关了，代价只是语言包多几条查不到的条目 ——
+            # 而这个语言包本来就有大量死条目（见 README），不差这几条。
+            for variant in key_variants(k):
+                todo[variant] = where
 
     os.makedirs(OUT_DIR, exist_ok=True)
     with open(os.path.join(OUT_DIR, "to-translate.tsv"), "w", encoding="utf-8") as fh:

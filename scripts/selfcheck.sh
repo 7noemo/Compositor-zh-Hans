@@ -20,8 +20,15 @@
 #    7. Release 说明能生成
 #    8. workflow YAML 能解析
 #    9. Release 附件名必须是纯 ASCII（GitHub 会改写非 ASCII 附件名）
-#   10. （可选 --src）拿上游源码做**精确**覆盖率：低于阈值、
-#       或出现「带实际内容」的缺口就失败（顺便体检格式符提示表）
+#   10. （可选 --src）拿上游源码做**精确**覆盖率：
+#       10.1 覆盖率不能低于阈值
+#       10.2 缺口门禁按 CI 的宽松模式跑（有缺口只警告记账、不红），
+#            另外用**合成数据**验证严格模式真的会在有真缺口时退出码 1
+#            —— 直接跑宽松模式是永远通过的，不这么测就等于没查
+#       10.3 提示表自动维护工具（sync_hints.py）能跑通
+#       10.4 孤儿 key 清理工具（prune_obsolete.py）能跑通
+#       10.5 四个工具都复用 analyze_coverage 里的插值算法 ——
+#            一旦抄成两份，必然又出「本地绿、CI 红」
 #
 set -euo pipefail
 
@@ -456,17 +463,96 @@ import json;print(json.load(open('build/coverage.json'))['translatable']['covera
         bad "覆盖率 ${PCT}% 低于阈值 ${MIN_COVERAGE}% —— 有新增文案没翻？"
       fi
 
-      # 10.2 精确缺口 —— 比百分比更早报警。
-      #      允许剩下的只有「没有实际内容」的文案（空串、纯符号如 ·），
-      #      一旦出现带字母/数字的缺口，说明真的有文案没翻，立刻红。
-      #      判断逻辑在 tools/check-coverage-gap.py，CI 用的是同一份。
+      # 10.2 缺口门禁。
+      #      2026-10-10 起 CI 改用「宽松模式」：有未译文案只记账（写
+      #      build/gaps.json、开 Issue、写进 Release 说明），**不再中断流水线** ——
+      #      以前有缺口就退出码 1，于是上游加一条新文案就让整条流水线永久卡死等人修。
+      #      副作用是宽松模式永远返回 0，直接跑它等于没查。所以这里：
+      #        a) 先按 CI 的方式跑一遍（其实永远通过，但会把缺口清单打出来）
+      #        b) 再用**合成数据**验证严格模式确实会在有真缺口时退出码 1
       if "$PY" scripts/tools/check-coverage-gap.py build/coverage.json \
            > "$WORK/gap.out" 2>&1; then
         sed 's/^/     /' "$WORK/gap.out"
-        ok "A 类缺口只剩无实际内容的文案"
+        GAPN="$("$PY" -c "
+import json;print(json.load(open('build/gaps.json'))['missing_contentful'])" 2>/dev/null || echo 0)"
+        if [ "$GAPN" = "0" ]; then
+          ok "A 类缺口只剩无实际内容的文案"
+        else
+          warn "有 ${GAPN} 条带实际内容的缺口 —— 不拦你，CI 会照常发布并记账（见上）"
+        fi
       else
         sed 's/^/     /' "$WORK/gap.out"
-        bad "有带实际内容的文案没翻（见上）—— 补上再推"
+        bad "缺口检查脚本本身出错（不是「有缺口」，是工具挂了）—— 见上"
+      fi
+
+      # 10.2b 合成数据测严格模式：有真缺口必须返回 1，只有符号缺口必须返回 0。
+      #       不测这个的话，宽松模式改错了（比如忘了 return 1）永远发现不了。
+      "$PY" -c "
+import json
+json.dump({'translatable': {'distinct_strings': 10, 'covered': 8,
+                            'coverage_percent': 80.0},
+           'missing_keys': ['', '·', 'Some Real Gap'],
+           'hints': {'loaded': 0, 'stale': [], 'unhinted_literals': []}},
+          open('$WORK/cov-real-gap.json', 'w'), ensure_ascii=False)
+json.dump({'translatable': {'distinct_strings': 10, 'covered': 9,
+                            'coverage_percent': 90.0},
+           'missing_keys': ['', '·'],
+           'hints': {'loaded': 0, 'stale': [], 'unhinted_literals': []}},
+          open('$WORK/cov-symbol-only.json', 'w'), ensure_ascii=False)
+"
+      RC1=0
+      "$PY" scripts/tools/check-coverage-gap.py "$WORK/cov-real-gap.json" \
+        --strict --gaps-out "$WORK/g1.json" >/dev/null 2>&1 || RC1=$?
+      RC0=0
+      "$PY" scripts/tools/check-coverage-gap.py "$WORK/cov-symbol-only.json" \
+        --strict --gaps-out "$WORK/g0.json" >/dev/null 2>&1 || RC0=$?
+      if [ "$RC1" -eq 1 ] && [ "$RC0" -eq 0 ]; then
+        ok "严格模式判定正确（有真缺口=1，只有符号缺口=0）"
+      else
+        bad "严格模式判定不对：有真缺口应得 1 实际 ${RC1}，只有符号缺口应得 0 实际 ${RC0}"
+      fi
+      # 宽松模式对同一份「有真缺口」的数据必须放行，否则 CI 又会被卡住
+      RCW=0
+      "$PY" scripts/tools/check-coverage-gap.py "$WORK/cov-real-gap.json" \
+        --gaps-out "$WORK/g1.json" >/dev/null 2>&1 || RCW=$?
+      if [ "$RCW" -eq 0 ]; then
+        ok "宽松模式对未译缺口不拦截（CI 不会被卡住）"
+      else
+        bad "宽松模式居然退出码 ${RCW} —— 那 CI 又会因为缺口永久卡死"
+      fi
+
+      # 10.3 / 10.4 两个自动维护工具必须能跑通（都走 --dry-run，无副作用）
+      if "$PY" scripts/tools/sync_hints.py build/coverage.json --dry-run \
+           > "$WORK/hints.out" 2>&1; then
+        ok "提示表自动维护工具能跑通（$(grep -c . "$WORK/hints.out") 行输出）"
+      else
+        bad "sync_hints.py 跑不通 —— 提示表失效又会变成永久红："
+        tail -8 "$WORK/hints.out" | sed 's/^/     /'
+      fi
+      if "$PY" scripts/tools/prune_obsolete.py build/coverage.json --dry-run \
+           > "$WORK/prune.out" 2>&1; then
+        ok "孤儿 key 清理工具能跑通（$(grep -c . "$WORK/prune.out") 行输出）"
+      else
+        bad "prune_obsolete.py 跑不通："
+        tail -8 "$WORK/prune.out" | sed 's/^/     /'
+      fi
+
+      # 10.5 插值 key 的算法只能有一份 —— 抄成两份必然分歧（踩过一次：
+      #      merge_translations / check-strings 各抄一份 .strings 语法检查，
+      #      结果「本地 plutil 绿、Linux CI 红」，查了半天）。
+      #      断言的是「都从 analyze_coverage 里取」这个不变量，
+      #      而不是某个具体函数名 —— extract_strings 用 key_variants、
+      #      sync_hints 用 split_interpolations，各自取的符号本来就不同。
+      MISSING_IMPORT=""
+      for f in extract_strings.py translate_missing.py sync_hints.py prune_obsolete.py; do
+        if ! grep -q 'analyze_coverage' "scripts/tools/${f}" 2>/dev/null; then
+          MISSING_IMPORT="${MISSING_IMPORT} ${f}"
+        fi
+      done
+      if [ -z "$MISSING_IMPORT" ]; then
+        ok "四个工具都复用 analyze_coverage（插值 key 的算法只有一份）"
+      else
+        bad "这些工具没复用 analyze_coverage，可能自己抄了一份：${MISSING_IMPORT}"
       fi
     else
       bad "analyze_coverage.py 失败："

@@ -3,9 +3,10 @@
 **给 [Compositor](https://github.com/robbietilton/Compositor)（macOS 图像编辑器）用的外挂简体中文语言包。**
 双击一个脚本就能把界面变成中文，双击另一个就能完全还原。不编译、不打包、不修改任何可执行代码。
 
-[![语言包词条](https://img.shields.io/badge/语言包-1252_条-blue)](#能翻译到什么程度)
-[![可翻译文案覆盖](https://img.shields.io/badge/可翻译文案覆盖-99.6%25-brightgreen)](#能翻译到什么程度)
-[![上游](https://img.shields.io/badge/上游-v1.4.7-lightgrey)](https://github.com/robbietilton/Compositor/releases)
+[![语言包词条](https://img.shields.io/badge/语言包-1269_条-blue)](#能翻译到什么程度)
+[![可翻译文案覆盖](https://img.shields.io/badge/可翻译文案覆盖-99.4%25-brightgreen)](#能翻译到什么程度)
+[![上游](https://img.shields.io/badge/上游-v1.4.9-lightgrey)](https://github.com/robbietilton/Compositor/releases)
+[![全自动跟随上游](https://img.shields.io/badge/跟随上游-全自动-success)](#上游发新版之后会发生什么)
 [![许可证](https://img.shields.io/badge/许可证-MIT-green)](LICENSE)
 
 ---
@@ -239,22 +240,22 @@ codesign --force --sign - --deep /Applications/Compositor.app
 
 ### 实测数据
 
-对上游 v1.4.7 源码做的静态分析（用 `scripts/tools/analyze_coverage.py` 复现）：
+对上游 v1.4.9 源码做的静态分析（用 `scripts/tools/analyze_coverage.py` 复现）：
 
 | 类别 | 数量 | 外挂能翻吗 |
 | --- | --- | --- |
-| **A 类**：字面量直接写在本地化位置上<br><sub>`Text("Add Layer")`、`.help("Invert")`、`Label("New", systemImage: "plus")`、<br>`.help(cond ? "Add mask" : "Remove mask")`</sub> | **482 个文案** | ✅ **能** |
-| **B 类**：变量 / 表达式出现在同一位置<br><sub>`Text(title)`、`.help(help)`、`Text($0.rawValue)`</sub> | 176 处 / 67 种写法 | ❌ **不能** |
+| **A 类**：字面量直接写在本地化位置上<br><sub>`Text("Add Layer")`、`.help("Invert")`、`Label("New", systemImage: "plus")`、<br>`.help(cond ? "Add mask" : "Remove mask")`</sub> | **503 个文案** | ✅ **能** |
+| **B 类**：变量 / 表达式出现在同一位置<br><sub>`Text(title)`、`.help(help)`、`Text($0.rawValue)`</sub> | 179 处 / 68 种写法 | ❌ **不能** |
 
-语言包 1252 条词条，对 A 类覆盖 **480 / 482 = 99.6%**
-（剩下两个是空串和 `·`，本来就不该翻）。
+语言包 1269 条词条，对 A 类覆盖 **500 / 503 = 99.4%**
+（剩下三个是空串、`·` 和 `×`，本来就不该翻）。
 
 这个数字是**精确核对**出来的，不是「差不多对上了」：工具会把每条源码文案按
 SwiftUI 的运行时规则算成真实 key（`"Close \(x)"` → `Close %@`），
-要求语言包里逐字符存在。CI 里 `scripts/tools/check-coverage-gap.py` 会在
-缺口里出现任何一条**带实际内容**的文案时直接失败，不让它悄悄溜过去。
+要求语言包里逐字符存在。CI 里 `scripts/tools/check-coverage-gap.py` 会逐条核对，
+缺口**不会**被静默放过 —— 但也**不再中断发布**（见下方「上游发新版之后会发生什么」）。
 
-> **关于插值文案（39 条，也是最容易出错的一类）**
+> **关于插值文案（40 条，也是最容易出错的一类）**
 >
 > 源码里写 `Text("Close \(tab.title)")`，运行时 SwiftUI 查的 key **不是**
 > 那串源码，而是把插值换成格式符后的 `Close %@`。所以语言包里存的是
@@ -297,7 +298,7 @@ Text(verbatim: name) // 显式声明「不要翻译」
 `name` 里就算存着 `"Add Layer"`，语言包里也有这条译文，**它也不会去查** ——
 因为查不查表在**编译期**就由参数类型决定好了，运行时改不了。
 
-要翻译这 176 处，只有一条路：**改源码，把它们包一层查表助手，然后重新编译整个 app**。
+要翻译这 179 处，只有一条路：**改源码，把它们包一层查表助手，然后重新编译整个 app**。
 那是另一个项目要做的事（需要完整 Xcode 和一个 macOS 26 的构建环境），
 不在「外挂语言包」的能力范围内。
 
@@ -486,7 +487,7 @@ mv ~/Library/Application\ Support/CompositorHanhua ~/.Trash/
 <details>
 <summary><b>工具选项栏的 Rectangle/Ellipse、混合模式的 Normal/Multiply、部分菜单条目还是英文</b></summary>
 
-这些**不是漏翻，是外挂语言包翻不了的那一类**（B 类，约 176 处）。
+这些**不是漏翻，是外挂语言包翻不了的那一类**（B 类，约 179 处）。
 上面「能翻译到什么程度」一节有完整清单和源码位置。要点：SwiftUI 只对
 **编译期写死的字面量**查表；枚举的 `rawValue`、函数参数传进来的标题都是
 运行时变量，走原样渲染，永远不会查语言包。
@@ -518,7 +519,7 @@ SwiftUI 查表用的是**运行时算出来的 key**，不是源码里那串字�
 - 工具按上表规则把每条源码文案算成真实 key，要求语言包里逐字符存在
 - `check-strings.py` 直接禁止 key 里出现 `%1$@`（序号只能写在译文里，
   用来重排参数，例如 `"%@ of %@." = "%2$@的%1$@。"`）
-- 27 条插值文案的真实格式符登记在 `scripts/tools/key-type-hints.json`，
+- 40 条插值文案的真实格式符登记在 `scripts/tools/key-type-hints.json`，
   不靠猜
 - CI 与自检都会在出现「带实际内容的缺口」时直接失败
 
@@ -621,7 +622,7 @@ SwiftUI 查表用的是**运行时算出来的 key**，不是源码里那串字�
 ```
 Compositor-zh-Hans/
 ├── zh-Hans.lproj/
-│   └── Localizable.strings          语言包本体（唯一的核心资产，1252 条）
+│   └── Localizable.strings          语言包本体（唯一的核心资产，1269 条）
 ├── 一键安装语言包.command             面向使用者的双击入口（薄壳）
 │                                     └ Release 附件里叫 install-zh-Hans.command
 ├── 一键还原官方版.command             同上
@@ -637,21 +638,25 @@ Compositor-zh-Hans/
 │   └── tools/
 │       ├── extract_strings.py       全量扫描界面文案 + 与语言包做差集
 │       ├── analyze_coverage.py      统计「外挂能翻多少」的权威口径（A/B 类，精确匹配）
-│       ├── check-coverage-gap.py    缺口门禁：有带实际内容的文案没翻就退出码 1
-│       ├── key-type-hints.json      27 条插值文案的真实格式符表（%@/%lld/%lf）
-│       ├── translate_missing.py     术语表优先 + LLM 兜底
+│       ├── check-coverage-gap.py    缺口核对：默认只记账不拦截（--strict 才退出码 1）
+│       ├── sync_hints.py            自动维护下面的提示表（迁移 + 剪枝，无需人工）
+│       ├── prune_obsolete.py        清掉上游删掉/改名后留下的孤儿 key
+│       ├── key-type-hints.json      40 条插值文案的真实格式符表（%@/%lld/%lf）
+│       ├── strings_syntax.py        .strings 语法检查的唯一实现（本地 plutil / CI 纯 Python）
+│       ├── translate_missing.py     术语表优先 + LLM 兜底（只翻 A 类）
 │       ├── merge_translations.py    把译文合并进语言包
 │       ├── check-strings.py         校验格式 / 重复 key / 占位符一致性 / key 禁带序号
 │       ├── update_state.py          写回 state/upstream.json
-│       ├── make_release_notes.py    生成 Release 说明
+│       ├── make_release_notes.py    生成 Release 说明（含本轮缺口记账）
 │       └── lint-shell.py            shell 雷区检查（见下方「踩过的坑」）
 ├── translations/
-│   ├── glossary.tsv                 术语表（259 条，按 Photoshop 中文版用词）
-│   ├── curated.tsv                  人工校对译文（183 条）
+│   ├── glossary.tsv                 术语表（按 Photoshop 中文版用词）
+│   ├── curated.tsv                  人工校对译文
 │   ├── auto.tsv                     自动补译结果
-│   └── never-translate.txt          确认不翻译的（91 条：PSD 常量、商品名…）
+│   └── never-translate.txt          确认不翻译的（PSD 常量、商品名…）
 ├── state/
 │   ├── upstream.json                上游版本与本仓库统计
+│   ├── upstream-a-keys.json         上一轮扫到的 A 类文案原文（孤儿 key 清理的基线）
 │   └── pending/untranslated.tsv     待人工处理的词条
 └── .github/workflows/
     └── sync-upstream.yml            定时跟随上游 → 更新语言包 → 发 Release
@@ -659,17 +664,69 @@ Compositor-zh-Hans/
 </details>
 
 <details>
+<summary><b>上游发新版之后会发生什么（全自动，不需要人管）</b></summary>
+
+每 6 小时跑一次 `.github/workflows/sync-upstream.yml`。上游一发新版本就走完整条链路：
+
+```
+①  查到上游有新 tag
+②  下载新源码 tarball
+③  静态分析 → 算出 A 类文案集合、还缺哪些、提示表哪些条目失效了
+④  自动维护格式符提示表（上游改了文案 ⇒ 把格式符迁移过去；改不动 ⇒ 剪掉）
+⑤  扫描新文案 → 与语言包做差集 → **只保留 A 类**（B 类和源码噪音翻了也没用）
+⑥  术语表优先，LLM 兜底把剩下的翻掉
+⑦  合并进语言包 → 校验
+⑧  摘掉上游已删/改名留下的孤儿 key（对比上一轮快照）
+⑨  逐条核对：A 类文案算出来的真实 key 是否都在语言包里
+⑩  提交、发 Release（tag 形如 lang-v1.4.9）
+```
+
+**关键：第 ⑨ 步有缺口也不拦你。** 缺口只「记账」——写进 `state/pending/`、
+写进 Release 说明，并开/更新一个 `待翻译` Issue，然后照常发布、照常推进版本号。
+
+> 为什么这么改：以前有缺口就退出码 1，于是不提交、不发布、`state/upstream.json`
+> 也不推进 —— 6 小时后再跑条件一模一样，**只要上游加一条新文案，整条流水线就
+> 永久卡死等人来修**（实测连续红了 4 次，每次都要人工 grep 源码补译文）。
+> 现在能翻的先发布出去，翻不掉的留个明确的账，不再需要人守着。
+> 本地想按老规矩严格拦截：`python3 scripts/tools/check-coverage-gap.py build/coverage.json --strict`
+
+**要做到「零人工」，还需要配一个 LLM key**（第 ⑥ 步的兜底）：
+
+```bash
+gh secret set LLM_API_KEY      # 粘贴你的 key
+gh variable set LLM_BASE_URL --body 'https://api.deepseek.com/v1'   # 换成你要用的服务
+gh variable set LLM_MODEL    --body 'deepseek-chat'
+```
+
+不配也能跑：术语表命中的照补，其余是「记账 + 等人」。配了就是真的无人值守。
+
+另外有三件事以前要人工做、现在全自动了：
+
+| 以前 | 现在 |
+| --- | --- |
+| 上游改一句文案 ⇒ 提示表的按原文索引失效 ⇒ CI 永久红，得手动 grep 源码改 JSON | `sync_hints.py` 按文本相似度把格式符迁移到改后的文案上，改不动的剪掉 |
+| 上游删/改名 ⇒ 语言包里留下永远查不到的孤儿 key，得手工比对删除 | `prune_obsolete.py` 对比上一轮快照自动摘掉（带「一次删太多就中止」的安全阀） |
+| 新插值文案的格式符得人工核实后登记 | 与类型无关：把 `%@`/`%lld`/`%lf` 全部候选都写进去，命中哪个算哪个 |
+
+</details>
+
+<details>
 <summary><b>本地开发与验证</b></summary>
 
 ```bash
 # 拉一份上游源码（只为扫文案，不编译）
-bash scripts/fetch-upstream.sh v1.4.7
+bash scripts/fetch-upstream.sh v1.4.9
 
 # 看「外挂到底能翻多少」——这是最该关注的那个数字（精确匹配口径）
 python3 scripts/tools/analyze_coverage.py _upstream --json build/coverage.json
 
-# 看有没有「带实际内容」的缺口（有就退出码 1；CI 用的就是这一条）
+# 看有没有缺口（默认只记账不拦截；加 --strict 才是「有缺口就退出码 1」）
 python3 scripts/tools/check-coverage-gap.py build/coverage.json
+python3 scripts/tools/check-coverage-gap.py build/coverage.json --strict
+
+# 维护格式符提示表 / 清孤儿 key（都先加 --dry-run 看一眼）
+python3 scripts/tools/sync_hints.py build/coverage.json --dry-run
+python3 scripts/tools/prune_obsolete.py build/coverage.json --dry-run
 
 # 看有哪些新文案没翻（全量口径，分母混着非 UI 常量，仅供参考）
 python3 scripts/tools/extract_strings.py _upstream zh-Hans.lproj/Localizable.strings
@@ -679,14 +736,16 @@ python3 scripts/tools/translate_missing.py
 python3 scripts/tools/merge_translations.py translations/curated.tsv translations/auto.tsv
 python3 scripts/tools/check-strings.py
 
-# 提交前跑一遍自检（10 项，含 shell 雷区、ASCII 附件名与覆盖率）
+# 提交前跑一遍自检（10 项 / 约 30 条子检查，含 shell 雷区、孤儿清理与覆盖率）
 bash scripts/selfcheck.sh --src _upstream
 ```
 
 想启用 LLM 兜底翻译，本地这样跑：
 
 ```bash
-LLM_API_KEY=sk-xxx LLM_MODEL=gpt-4o-mini python3 scripts/tools/translate_missing.py --llm
+LLM_API_KEY=sk-xxx LLM_MODEL=deepseek-chat \
+  LLM_BASE_URL=https://api.deepseek.com/v1 \
+  python3 scripts/tools/translate_missing.py --llm
 ```
 </details>
 
@@ -857,7 +916,7 @@ dumpKey("\(s) of \(s).")                 // -> "%@ of %@."      ← 不编号
 
 而之前之所以没暴露，是因为覆盖率用的是「骨架匹配」——只要占位符**位置**对上
 就算翻好，格式符类型写错（`Int` 插值写成 `%@`）和带序号这两种错都照单放过。
-现在改成精确匹配，并把 27 条插值文案的真实格式符登记进
+现在改成精确匹配，并把 40 条插值文案的真实格式符登记进
 `scripts/tools/key-type-hints.json`，不再靠猜。
 </details>
 

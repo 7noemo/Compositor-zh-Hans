@@ -1,17 +1,17 @@
 /*
  * Localizable.strings — Compositor 简体中文语言包
- * 目标版本：Compositor v1.4.7（上游 robbietilton/Compositor，MIT）
+ * 目标版本：Compositor v1.4.9（上游 robbietilton/Compositor，MIT）
  *
  * 词条来源：
  *   [A] skyecx/compositor-zh-hans 语言包（术语对齐 Adobe Photoshop 简体中文版）
  *   [B] 上游 PR #223 的 String Catalog（Xcode 从真实构建提取，广度可信）
  *   [C] 手工补充：经源码逐个确认走 LocalizedStringKey 查表的文案
  *
- * 合计 1252 条。
+ * 合计 1269 条。
  * 校验：plutil -lint
  *       + tools/check-strings.py        （占位符一致性、key 禁带序号）
  *       + tools/analyze_coverage.py     （key 与 SwiftUI 运行时精确对齐，见下）
- *       + tools/check-coverage-gap.py   （缺口门禁，CI 与自检共用同一份）
+ *       + tools/check-coverage-gap.py   （缺口核对；CI 用它记账，--strict 才拦截）
  *
  * ⚠️ key 里绝不允许出现 %1$@ 这种带序号的格式符。
  *
@@ -58,7 +58,6 @@
 "Save As…" = "存储为…";
 "Export…" = "导出…";
 "Export PNG…" = "导出 PNG…";
-"Export JPEG" = "导出 JPEG";
 "Export JPEG…" = "导出 JPEG…";
 "Import image" = "导入图像";
 "Import Images…" = "导入图像…";
@@ -168,7 +167,6 @@
 "Import an image or add a blank layer." = "导入图像或添加空白图层。";
 "Choose a JPEG, PNG, HEIC, or TIFF image." = "请选择 JPEG、PNG、HEIC 或 TIFF 图像。";
 "Transparent canvas · sRGB" = "透明画布 · sRGB";
-"Background for transparency" = "透明区域的背景";
 "Background color" = "背景色";
 "Center" = "居中";
 "High quality" = "高品质";
@@ -671,7 +669,6 @@
 "In %@   Out %@" = "输入 %@   输出 %@";
 "%lld°  %lld" = "%lld°  %lld";
 "Final dimensions must be 1–%@ pixels per side." = "最终尺寸每边须为 1–%@ 像素。";
-"Zoom in (⌘+), now %@. At 100% each pixel of the JPEG is one pixel of the screen, as on the canvas" = "放大（⌘+），当前 %@。在 100% 时 JPEG 的每个像素对应屏幕的一个像素，与画布一致";
 "Zoom out (⌘−), now %@" = "缩小（⌘−），当前 %@";
 "Drag or scroll to move around; double-click switches between Fit and 100%" = "拖动或滚动以平移视图；双击在适合屏幕与 100% 之间切换";
 "%lld%" = "%lld%";
@@ -814,7 +811,6 @@
 "The height of each line of characters" = "每行字符的高度";
 "How far apart the screen's lines are" = "屏幕扫描线之间的间距";
 "Light blooming around the lines, like a CRT's phosphors" = "扫描线周围泛出的光晕，模拟 CRT 荧光效果";
-"Break the lines into glowing beads" = "将扫描线打散为发光的颗粒";
 "Make the lines waver sideways down the screen, like a CRT losing sync" = "让扫描线沿屏幕自上而下左右摆动，模拟 CRT 失同步效果";
 "Characters" = "字符";
 "The characters to draw with, in any order: each spot gets the one whose ink best matches its tone" = "用于绘制的字符（顺序不限）：每个位置选用墨色最接近其色调的字符";
@@ -1244,7 +1240,6 @@
 "%@ canvas" = "%@画布";
 "%@ is assigned to both %@ and %@." = "%@ 同时被分配给 %@ 和 %@。";
 "%@ is reserved by macOS." = "%@ 已被 macOS 占用。";
-"%@ × %@ px · sRGB" = "%@ × %@ 像素 · sRGB";
 "%@. Double-click to reset." = "%@。双击可重置。";
 "%lld degrees" = "%lld 度";
 "1 more tab" = "还有 1 个标签页";
@@ -1343,3 +1338,25 @@
 "copy" = "拷贝";
 "effect" = "效果";
 "Purple" = "紫色";
+"%@%" = "%@%";
+"Break the lines into beads where the picture is darker than this, blending into solid lines where it's brighter" = "画面暗于此处时线条断为颗粒，亮于此处则融合成实线";
+"Click or drag to move the view" = "单击或拖动以移动视图";
+"Darker or lighter before the lines are drawn" = "绘制线条前的加深或减淡";
+"Draw no line where the picture is darker than this, leaving the screen dark" = "画面暗于此处时不画线，该区域保持黑暗";
+"Export As" = "导出为";
+"Export As…" = "导出为…";
+"Format" = "格式";
+"Height in pixels; the width follows, keeping the proportions" = "高度（像素）；宽度按比例跟随";
+"How bright the lines are where the picture is black, so they show even over black" = "画面全黑处线条的亮度，使其在黑色背景上依然可见";
+"How far the brightness is smoothed before it displaces the lines, from sharp ridges to rounded hills" = "亮度在推动线条前的平滑程度：从尖锐的山脊到圆润的丘陵";
+"How much of the gap a bright line fills; dimmer parts draw it thinner" = "亮线填充间隙的程度；较暗处线条画得更细";
+"Lift the lines where the picture is bright, or lower them when negative, so they swell into its shapes" = "画面明亮处抬高线条，负值则压低，使之随画面形状起伏";
+"Move the red and blue apart, for colored fringes on the lines" = "分离红蓝通道，让线条带上彩色边缘";
+"Navigator" = "导航器";
+"Navigator (300% and above)" = "导航器（300% 及以上）";
+"Page" = "页面";
+"Scale the export: the document stays as it is" = "缩放导出结果：文档本身保持不变";
+"Transparency kept · sRGB" = "保留透明度 · sRGB";
+"Width in pixels; the height follows, keeping the proportions" = "宽度（像素）；高度按比例跟随";
+"Zoom in (⌘+), now %@. At 100% each pixel of the export is one pixel of the screen" = "放大（⌘+），当前 %@。在 100% 时，导出的每个像素对应屏幕的一个像素";
+"sRGB" = "sRGB";

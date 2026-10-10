@@ -4,6 +4,7 @@
 
 输入：
     build/to-translate.tsv       extract_strings.py 的产物（key <TAB> 空 <TAB> 来源）
+    build/coverage.json          analyze_coverage.py 的产物 —— **用它把清单筛成 A 类**
     zh-Hans.lproj/Localizable.strings   已有译文（最高权威）
     translations/curated.tsv    人工校对译文
     translations/glossary.tsv   术语表
@@ -12,6 +13,20 @@
 输出：
     translations/auto.tsv       本轮自动补齐的译文（会被 merge_translations.py 合并进语言包）
     state/pending/untranslated.tsv   术语表与 LLM 都没搞定的，等人来看
+
+为什么必须按 A 类过滤（2026-10-10 加）
+--------------------------------------
+extract_strings.py 走的是**全量口径**：把源码里所有像人话的字面量都捞出来。
+那份清单里混着两类翻不了的东西：
+
+  * B 类 —— 先赋给 String 变量再进视图（Text(title)、.help(help)、
+    NSMenuItem(title: …)…）。SwiftUI 不查表，放语言包里也不生效。
+  * 源码片段噪音 —— ' by 10'、' EV'、' : session.shapeKind == .rectangle ? ' 之类。
+
+不筛的话，一旦配了 LLM_API_KEY，模型会把它们也翻一遍塞进语言包 ——
+每次同步平白多一两百条永远查不到的死条目，state/pending/ 也会被人造噪音淹没。
+所以现在默认只翻 analyze_coverage.py 认定的「A 类里还缺译文」的那批。
+想恢复全量行为加 --no-filter。
 
 术语表优先的三级命中
 --------------------
@@ -38,6 +53,15 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 BUILD = os.path.join(ROOT, "build")
 PACK = os.path.join(ROOT, "zh-Hans.lproj", "Localizable.strings")
 PENDING_DIR = os.path.join(ROOT, "state", "pending")
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# 复用「插值 -> 格式串」的候选生成：既用来把清单筛成 A 类，
+# 也用来保证给出的 key 形式与运行时一致（提示表优先）。
+from analyze_coverage import HINTS, HINTS_PATH, key_variants, load_hints  # noqa: E402
+
+HINTS.clear()
+HINTS.update(load_hints(HINTS_PATH))
 
 PLACEHOLDER = re.compile(
     r'%(?:\d+\$)?[-+ #0]*(?:\d+)?(?:\.\d+)?(?:hh|h|ll|l|q|L|z|j|t)?[@diouxXeEfgGaAcsp]')
@@ -241,6 +265,10 @@ def main():
     ap.add_argument("--batch", type=int, default=40, help="每次发给 LLM 的条数")
     ap.add_argument("--llm", action="store_true", help="即使没有 API Key 也尝试调用")
     ap.add_argument("--limit", type=int, default=0, help="最多处理多少条（调试用）")
+    ap.add_argument("--coverage", default=os.path.join(BUILD, "coverage.json"),
+                    help="analyze_coverage.py 的产物，用来把清单筛成 A 类")
+    ap.add_argument("--no-filter", action="store_true",
+                    help="不做 A 类过滤，按全量清单翻（会产生大量死条目）")
     args = ap.parse_args()
 
     if not os.path.exists(args.todo):
@@ -258,6 +286,25 @@ def main():
                 todo.append(key)
     if args.limit:
         todo = todo[:args.limit]
+
+    # ---- 筛成 A 类：全量清单里混着 B 类与源码噪音，翻了也不生效 ----
+    if not args.no_filter:
+        if os.path.exists(args.coverage):
+            with open(args.coverage, encoding="utf-8") as fh:
+                cov = json.load(fh)
+            need = set()
+            for lit in cov.get("missing_keys", []):
+                need.add(lit)
+                # A 类缺口在清单里是以「算出来的 key」形式出现的（含全部候选），
+                # 所以把每条缺口文案的候选 key 也放进允许集合
+                need.update(key_variants(lit))
+            before = len(todo)
+            todo = [k for k in todo if k in need]
+            print(f"A 类过滤        : {before} 条 -> {len(todo)} 条"
+                  f"（滤掉 {before - len(todo)} 条 B 类/噪音）")
+        else:
+            print(f"⚠️  找不到 {args.coverage}，无法筛成 A 类；"
+                  f"先跑 analyze_coverage.py --json（或加 --no-filter 无脑全翻）")
 
     exact, skel = build_dict()
     never = load_never()

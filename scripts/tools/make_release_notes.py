@@ -90,8 +90,9 @@ TEMPLATE = """Compositor 的**简体中文语言包**，对应上游 **{up_tag}*
 > 这个覆盖率是**精确核对**出来的，不是「差不多对上了」：工具会按 SwiftUI 的
 > 运行时规则把每条源码文案算成真实查表 key（`"Close \\(x)"` → `Close %@`，
 > `Int` 插值 → `%lld`，且**永远不带序号**），要求语言包里逐字符存在。
-> CI 里只要出现一条「有实际内容却没翻」的文案就会直接失败 ——
-> 所以「明明有译文却还显示英文」这类问题不会再悄悄溜过去。
+> 对不上的会被列进 `state/pending/` 并把条数写在下面，不会悄悄溜过去。
+
+{top_gaps}
 
 ## 已知限制（请务必看一眼）
 
@@ -145,12 +146,49 @@ def repo_from_git():
     return f"{m.group(1)}/{m.group(2)}" if m else ""
 
 
+def gap_block(path):
+    """本轮未译完的文案 —— 直接来自 check-coverage-gap.py 的记账文件。
+
+    为什么要在 Release 说明里也写一遍：CI 已经不会因为缺口中断发布了
+    （见 workflow 里「精确核对」那一步的说明），那就得让「这一版有没有缺」
+    在用户能看到的地方写清楚，而不是藏在 Actions 日志里。
+    """
+    if not os.path.exists(path):
+        return ""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            g = json.load(fh)
+    except (OSError, ValueError):
+        return ""
+    n = g.get("missing_contentful", 0)
+    if not n:
+        return ("## 本轮有没有漏翻\n\n"
+                "**没有。** A 类（源码里直接写成字面量、语言包能生效的位置）"
+                "本轮全部有译文；剩下的只有空串、`·` 这类本来就不该翻的。\n")
+    lines = ["## 本轮还有 {n} 条没翻完".format(n=n), "",
+             "这几条在界面上会显示英文。其余部分不受影响。", "",
+             "| A 类文案总数 | 已覆盖 | 覆盖率 | 本轮缺口 |",
+             "| --- | --- | --- | --- |",
+             "| {t} | {c} | {p}% | **{n}** |".format(
+                 t=g.get("distinct_strings", "?"), c=g.get("covered", "?"),
+                 p=g.get("coverage_percent", "?"), n=n), "",
+             "缺口清单（也会同步进仓库的「待翻译」Issue）：", ""]
+    for k in g.get("missing_keys", []):
+        lines.append("* `%s`" % k)
+    lines += ["",
+              "> 想帮忙：把 `key<TAB>译文` 加进仓库的 `translations/curated.tsv` 即可，"
+              "下一版就会带上。确认不需要翻的，加进 `translations/never-translate.txt`。"]
+    return "\n".join(lines) + "\n"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", default=os.environ.get("REPO", "") or repo_from_git())
     ap.add_argument("--version", default=os.environ.get("VERSION", ""))
     ap.add_argument("--zip-name", default="", help="语言包压缩包文件名")
     ap.add_argument("--state", default=os.path.join(ROOT, "state", "upstream.json"))
+    ap.add_argument("--gaps", default=os.path.join(ROOT, "build", "gaps.json"),
+                    help="check-coverage-gap.py 的记账文件")
     args = ap.parse_args()
 
     with open(args.state, encoding="utf-8") as fh:
@@ -181,6 +219,7 @@ def main():
         translatable_covered=g(loc, "translatable_covered"),
         untranslatable_sites=g(loc, "untranslatable_sites"),
         untranslatable_exprs=g(loc, "untranslatable_expressions"),
+        top_gaps=gap_block(args.gaps),
     ))
     return 0
 
