@@ -109,7 +109,8 @@ def main():
     print(f"  语言包 {total} 条")
     print(f"  外挂可翻译文案覆盖率 {pct}%（{covered}/{found}）")
     print(f"  外挂翻不了的位置 {loc.get('untranslatable_sites', '?')} 处")
-    print(f"  待处理 {loc.get('scan_todo', '?')} 条 -> state/pending/untranslated.tsv")
+    print(f"  全量扫描未覆盖 {loc.get('scan_todo', '?')} 条"
+          f"（分母含 PSD 二进制标记等噪音，仅供参考）")
 
     if args.github_output:
         with open(args.github_output, "a", encoding="utf-8") as fh:

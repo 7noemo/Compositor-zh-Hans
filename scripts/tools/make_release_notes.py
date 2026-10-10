@@ -79,7 +79,6 @@ TEMPLATE = """Compositor 的**简体中文语言包**，对应上游 **{up_tag}*
 | **其中已覆盖** | {translatable_covered} 条（{pct}%） |
 | 全量扫描到的字面量 | {found} 条 |
 | 全量已覆盖 | {covered} 条（{scan_pct}%） |
-| 仍需人工确认 | {todo} 条 |
 | 对应上游版本 | {up_tag} |
 | 同步时间 | {last_sync} |
 
@@ -90,7 +89,7 @@ TEMPLATE = """Compositor 的**简体中文语言包**，对应上游 **{up_tag}*
 > 这个覆盖率是**精确核对**出来的，不是「差不多对上了」：工具会按 SwiftUI 的
 > 运行时规则把每条源码文案算成真实查表 key（`"Close \\(x)"` → `Close %@`，
 > `Int` 插值 → `%lld`，且**永远不带序号**），要求语言包里逐字符存在。
-> 对不上的会被列进 `state/pending/` 并把条数写在下面，不会悄悄溜过去。
+> 核对结果写在下面，不会悄悄溜过去。
 
 {top_gaps}
 
@@ -108,8 +107,10 @@ TEMPLATE = """Compositor 的**简体中文语言包**，对应上游 **{up_tag}*
   集中在部分工具面板的分组标题、鼠标悬停提示等位置。
   这不是语言包漏了，是外挂方案的能力边界。
 * 命令面板（⇧⌘P）的**搜索**仍按英文原文匹配：界面显示中文，但要搜某个工具得输入英文。
-* 残留约 {todo} 条未翻译，基本是 `8BIM`、`TySh` 这类 PSD 二进制标记、
-  纯数字读数与商品名（MacBook、iPhone 等）—— 翻了反而会出错。
+* 全量扫描里另有约 {todo} 条没进语言包，基本是 `8BIM`、`TySh` 这类 PSD 二进制标记、
+  纯数字读数与商品名（MacBook、iPhone 等）—— 翻了反而会出错，属于刻意跳过。
+* 同步是**全自动**的：上游发新版后，能翻的自动翻好发出来，翻不了的直接跳过，
+  没有人会因此被叫去处理（本项目不维护「待人工确认」清单）。
 
 ## 环境要求
 
@@ -118,9 +119,8 @@ TEMPLATE = """Compositor 的**简体中文语言包**，对应上游 **{up_tag}*
 
 ## 数据
 
-* 待人工确认的词条：`state/pending/untranslated.tsv`
 * 术语表（改这里就能影响下一版用词）：`translations/glossary.tsv`
-* 人工校对译文：`translations/curated.tsv`
+* 人工校对译文（最高权威）：`translations/curated.tsv`
 
 ---
 
@@ -147,11 +147,14 @@ def repo_from_git():
 
 
 def gap_block(path):
-    """本轮未译完的文案 —— 直接来自 check-coverage-gap.py 的记账文件。
+    """本轮没译上的文案条数 —— 来自 check-coverage-gap.py 的产物。
 
-    为什么要在 Release 说明里也写一遍：CI 已经不会因为缺口中断发布了
-    （见 workflow 里「精确核对」那一步的说明），那就得让「这一版有没有缺」
-    在用户能看到的地方写清楚，而不是藏在 Actions 日志里。
+    为什么在 Release 说明里也要写一句：CI 不会因为缺口中断发布，那就得让
+    「这一版有没有漏翻」在用户看得见的地方写清楚，而不是藏在 Actions 日志里。
+
+    只说条数、**不列清单、不招呼人来补**：2026-10-10 起本项目取消了「人工确认」
+    这一环 —— 能翻的自动翻，翻不了的直接跳过，不留待办清单也不开 Issue。
+    这里保留一行统计纯粹是透明，不是让人来认领。
     """
     if not os.path.exists(path):
         return ""
@@ -164,21 +167,19 @@ def gap_block(path):
     if not n:
         return ("## 本轮有没有漏翻\n\n"
                 "**没有。** A 类（源码里直接写成字面量、语言包能生效的位置）"
-                "本轮全部有译文；剩下的只有空串、`·` 这类本来就不该翻的。\n")
-    lines = ["## 本轮还有 {n} 条没翻完".format(n=n), "",
-             "这几条在界面上会显示英文。其余部分不受影响。", "",
-             "| A 类文案总数 | 已覆盖 | 覆盖率 | 本轮缺口 |",
-             "| --- | --- | --- | --- |",
-             "| {t} | {c} | {p}% | **{n}** |".format(
-                 t=g.get("distinct_strings", "?"), c=g.get("covered", "?"),
-                 p=g.get("coverage_percent", "?"), n=n), "",
-             "缺口清单（也会同步进仓库的「待翻译」Issue）：", ""]
-    for k in g.get("missing_keys", []):
-        lines.append("* `%s`" % k)
-    lines += ["",
-              "> 想帮忙：把 `key<TAB>译文` 加进仓库的 `translations/curated.tsv` 即可，"
-              "下一版就会带上。确认不需要翻的，加进 `translations/never-translate.txt`。"]
-    return "\n".join(lines) + "\n"
+                "本轮全部有译文；剩下的只有空串、`·` 这类本来就不该翻的。")
+    return ("## 本轮漏翻 {n} 条\n\n"
+            "A 类文案 {t} 条，覆盖 {c} 条（{p}%）。本轮有 **{n} 条**没能译上，"
+            "界面上这几处会显示英文，其余部分不受影响。\n"
+            "\n"
+            "> 原因是自动翻译没处理掉（术语表未命中、模型也没给出合格结果）。"
+            "本项目**不维护待人工确认的清单** —— 能翻的已经自动翻好，"
+            "翻不了的直接跳过，没有人会因此被叫去处理。\n"
+            "\n"
+            "> 如果你想自己补：把 `key<TAB>译文` 加进仓库的 "
+            "`translations/curated.tsv`，下一版就会带上。").format(
+                n=n, t=g.get("distinct_strings", "?"), c=g.get("covered", "?"),
+                p=g.get("coverage_percent", "?"))
 
 
 def main():

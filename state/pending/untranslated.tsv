@@ -1,3 +1,0 @@
-# 术语表未命中、LLM 也没处理掉的界面文案。
-# 想自己翻：把 key<TAB>译文 加到 translations/curated.tsv 即可。
-# 确认无需翻译：把 key 加到 translations/never-translate.txt。

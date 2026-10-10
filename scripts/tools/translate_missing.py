@@ -12,7 +12,14 @@
 
 输出：
     translations/auto.tsv       本轮自动补齐的译文（会被 merge_translations.py 合并进语言包）
-    state/pending/untranslated.tsv   术语表与 LLM 都没搞定的，等人来看
+
+翻不了的直接跳过，不留待办（2026-10-10 起）
+------------------------------------------
+术语表没命中、LLM 也没处理掉的文案，**只打印条数，不写待办清单、不开 Issue**。
+理由：这批东西要么是外挂方案本来就翻不了的（B 类），要么是模型处理不了的长尾；
+把它们攒成一份「等人来认领」的清单，等于给整条流水线留了一条永远需要人工的尾巴 ——
+上游每发一版就要有人去看一眼，那正是这套自动化要拆掉的东西。
+想自己补译的时候再补就行：把 key<TAB>译文 加进 translations/curated.tsv（最高权威）。
 
 为什么必须按 A 类过滤（2026-10-10 加）
 --------------------------------------
@@ -24,7 +31,7 @@ extract_strings.py 走的是**全量口径**：把源码里所有像人话的字
   * 源码片段噪音 —— ' by 10'、' EV'、' : session.shapeKind == .rectangle ? ' 之类。
 
 不筛的话，一旦配了 LLM_API_KEY，模型会把它们也翻一遍塞进语言包 ——
-每次同步平白多一两百条永远查不到的死条目，state/pending/ 也会被人造噪音淹没。
+每次同步平白多一两百条永远查不到的死条目，日志也会被人造噪音淹没。
 所以现在默认只翻 analyze_coverage.py 认定的「A 类里还缺译文」的那批。
 想恢复全量行为加 --no-filter。
 
@@ -52,7 +59,6 @@ import urllib.request
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BUILD = os.path.join(ROOT, "build")
 PACK = os.path.join(ROOT, "zh-Hans.lproj", "Localizable.strings")
-PENDING_DIR = os.path.join(ROOT, "state", "pending")
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -333,7 +339,7 @@ def main():
 
     print(f"不译（常量/数值）: {len(guard)}")
     print(f"术语表命中      : {len(by_glossary)}")
-    print(f"待 LLM / 待人工 : {len(need_llm)}")
+    print(f"待 LLM 兜底     : {len(need_llm)}")
 
     # ---------------- LLM ----------------
     llm_out, rejected, failed = {}, [], []
@@ -343,7 +349,8 @@ def main():
 
     if need_llm and (api_key or args.llm):
         if not api_key:
-            print("⚠️  未设置 LLM_API_KEY，跳过 LLM 兜底")
+            print("⚠️  未设置 LLM_API_KEY，跳过 LLM 兜底"
+                  "（这批文案将直接跳过，不再留待办）")
             failed = need_llm
         else:
             # 术语表提示词：只取短词条，避免把整句塞进 prompt
@@ -389,26 +396,26 @@ def main():
         for k in sorted(merged):
             fh.write(f"{k}\t{merged[k]}\n")
 
-    os.makedirs(PENDING_DIR, exist_ok=True)
-    pending_path = os.path.join(PENDING_DIR, "untranslated.tsv")
-    with open(pending_path, "w", encoding="utf-8") as fh:
-        fh.write("# 术语表未命中、LLM 也没处理掉的界面文案。\n")
-        fh.write("# 想自己翻：把 key<TAB>译文 加到 translations/curated.tsv 即可。\n")
-        fh.write("# 确认无需翻译：把 key 加到 translations/never-translate.txt。\n")
-        for k in sorted(set(failed) | {r[0] for r in rejected}):
-            fh.write(f"{k}\t\t\n")
-
     if rejected:
         print()
         print("⚠️  LLM 产出被拦下的（占位符/中文检查未过）：")
         for k, v, why in rejected[:10]:
             print(f"   [{why}] {k!r} -> {v!r}")
 
+    # 没译上的：只报数，不留待办（见文件头「翻不了的直接跳过」）
+    skipped = sorted(set(failed) | {r[0] for r in rejected})
+
     print()
     print(f"写入 {os.path.relpath(args.out, ROOT)} : {len(merged)} 条")
     print(f"  其中术语表命中 {len(by_glossary)}，LLM 产出 {len(llm_out)}")
-    print(f"待人工处理 : {len(set(failed) | {r[0] for r in rejected})} 条 "
-          f"-> {os.path.relpath(pending_path, ROOT)}")
+    print(f"跳过（没译上）: {len(skipped)} 条 —— 不写待办、不开 Issue，直接跳过")
+    for k in skipped[:15]:
+        print(f"   · {k!r}")
+    if len(skipped) > 15:
+        print(f"   … 其余 {len(skipped) - 15} 条同类，不再列出")
+    if skipped:
+        print("   （原因通常是：术语表未命中且未配 LLM_API_KEY，或模型没给出合格结果。")
+        print("    想自己补：把 key<TAB>译文 加进 translations/curated.tsv。）")
     return 0
 
 

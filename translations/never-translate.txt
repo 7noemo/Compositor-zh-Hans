@@ -3,7 +3,7 @@
 # extract_strings.py 是「宁可多报不可漏报」的扫描器，所以清单里总会混进一些
 # 根本不是给人看的字符串。这里把已经确认过的噪音钉死，避免它们：
 #   * 被术语表/LLM 译错后写进语言包
-#   * 每轮同步都在 state/pending/ 里刷屏
+#   * 在每轮同步的日志里刷屏
 #
 # 每行一个 key（大小写、引号、破折号差异会被忽略），# 开头是注释。
 # 如果将来某个词真的需要翻译了，把它从这里删掉即可。
@@ -96,8 +96,8 @@ Compositor
 # ---- UI 上确实出现、但源码写法让语言包查不到的（**不是漏翻**）----
 # 调用点属于 Text(var) / Button(String) / .help(helper(…)) /
 # NSMenuItem(title:) / NSAlert.messageText 这几类 —— SwiftUI 不查表。
-# 列在这里只是为了让每轮 state/pending/ 不被这些已知项刷屏；
-# 哪天上游把文案挪到字面量位置，删掉对应行即可（覆盖率门禁会先报警）。
+# 列在这里是为了让每轮同步的日志不被这些已知项刷屏；
+# 哪天上游把文案挪到字面量位置，删掉对应行即可（覆盖率核对会先提示）。
 %lld DPI
 ) · Option from center · Shift-U or Tab for the next shape · Escape cancel · Space to pan
 )” was changed on disk.

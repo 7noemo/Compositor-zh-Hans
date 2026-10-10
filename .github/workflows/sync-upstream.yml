@@ -4,7 +4,7 @@ name: Sync upstream translations
 # 有的话：
 #   拉新源码 → 分析 A/B 类 → 自动维护提示表 → 全量扫描并筛出 A 类新文案 →
 #   术语表优先 + LLM 兜底补译 → 合并 → 校验 → 清理孤儿 key →
-#   精确核对 → （有缺口则记账）→ 提交 → 发一个语言包 Release。
+#   核对 → 提交 → 发一个语言包 Release。
 #
 # 注意：本仓库**不编译**任何东西，也不产出 DMG。
 # 外挂语言包方案不需要编译 —— 上游一旦改动源码，
@@ -16,15 +16,19 @@ name: Sync upstream translations
 #   （extract_strings.py），与现有语言包做差集。这样上游无论是新增菜单项、
 #   改了提示文案，还是把硬编码字符串挪进了新组件，都跑不掉。
 #
-# 「精确核对 A 类文案的 key」是最后一道闸：
+# 「核对 A 类文案的 key」是最后一道校验（不拦截）：
 #   SwiftUI 查表用的 key 由源码写法在编译期决定（"Close \(x)" -> "Close %@"，
 #   且**永远不带序号**）。所以光有译文不够，key 必须逐字符对上。
 #
-#   ⚠️ 2026-10-10 起这道闸**不再阻断流水线**，只记账（写 Release 说明 + 开 Issue）。
-#   以前有缺口就退出码 1 —— 不提交、不发布、state 不推进，6 小时后再跑条件
-#   一模一样，于是「上游加一条新文案」就会让整条流水线永久卡死等人来修
-#   （实测连续红了 4 次）。现在能翻的先发布出去，剩下的留个明确的账。
-#   想让它在本地按老规矩拦截：check-coverage-gap.py --strict。
+#   ⚠️ 2026-10-10 用户拍板：**取消人工确认**。
+#   —— 能翻的自动翻，翻不了的**直接跳过**：不写待办文件、不开 Issue、不等人。
+#   以前是「有缺口就退出码 1」→ 不提交、不发布、state 不推进，6 小时后再跑
+#   条件一模一样，于是「上游加一条新文案」就让整条流水线永久卡死等人来修
+#   （实测连续红了 4 次）；后来改成「记账 + 开 Issue 等人看」，那只是把
+#   「每轮必须有人看一眼」换了个形式，尾巴还在。
+#   现在缺口只写进 build/gaps.json（**不入库**）并在下面汇总里报个数字 ——
+#   纯粹是透明度，不是让人来认领。想按老规矩严格拦截：本地跑
+#   check-coverage-gap.py --strict（CI 不用这个模式）。
 #
 # 另外三件以前要人工做、现在自动做的事：
 #   * 提示表失效（上游改文案 ⇒ 按原文索引对不上）→ sync_hints.py 迁移/剪枝
@@ -48,10 +52,8 @@ on:
 
 permissions:
   # 需要写仓库内容（提交语言包 / state / 提示表）和创建 Release。
+  # 刻意**不要** issues: write —— 本项目不靠 Issue 记待办（见文件头「取消人工确认」）。
   contents: write
-  # 「缺口记账」那一步要开/更新/关闭 Issue。
-  # 没给这个权限也不影响同步：那一步不用 set -e，失败只打印告警。
-  issues: write
 
 concurrency:
   group: sync-upstream
@@ -202,7 +204,8 @@ jobs:
       - name: 术语表优先 + LLM 兜底补译文
         if: steps.upstream.outputs.needs_sync == 'true' || inputs.force
         env:
-          # 没配 LLM_API_KEY 也能跑：术语表命中的照补，其余进 state/pending/ 等人看。
+          # 没配 LLM_API_KEY 也能跑：术语表命中的照补，其余**直接跳过**
+          # （2026-10-10 起不再写待办清单、也不再开 Issue 等人看）。
           # 配了就会全自动补掉新文案 —— 这是「有新文案也不用管」的关键一步。
           LLM_API_KEY:  ${{ secrets.LLM_API_KEY }}
           LLM_BASE_URL: ${{ vars.LLM_BASE_URL || 'https://api.openai.com/v1' }}
@@ -240,17 +243,17 @@ jobs:
           set -euo pipefail
           python3 scripts/tools/prune_obsolete.py build/coverage.json --tag "$TAG"
 
-      # 精确核对：A 类文案按 SwiftUI 运行时规则算出的 key，必须在语言包里
-      # 逐字符存在。早先用「骨架匹配」（只看占位符位置）会把格式符类型或
-      # 序号写错的条目也判成已覆盖 —— 那正是「明明有译文却还显示英文」的根因。
+      # 核对：A 类文案按 SwiftUI 运行时规则算出的 key，是否在语言包里逐字符存在。
+      # 早先用「骨架匹配」（只看占位符位置）会把格式符类型或序号写错的条目也
+      # 判成已覆盖 —— 那正是「明明有译文却还显示英文」的根因。
       #
-      # ⚠️ 2026-10-10 起这一步**不再阻断流水线**（check-coverage-gap.py 默认宽松）。
-      # 以前有缺口就退出码 1：不提交、不发布、state 不推进，6 小时后再跑
-      # 条件一模一样 —— 只要上游加一条新文案，整条流水线就永久卡死等人来修。
-      # 现在缺口只「记账」：写进 build/gaps.json、state/pending/、Release 说明，
-      # 并在下面那一步开/更新一个 Issue 提醒。发布照常进行，版本号照常推进。
+      # ⚠️ 这一步**不阻断流水线**，也**不记待办**（check-coverage-gap.py 默认行为）：
+      # 没译上的文案只写进 build/gaps.json（build/ 不入库），并在日志与下面汇总里
+      # 报个条数。不开 Issue、不写 state/pending/、不等人来认领。
+      # 这是 2026-10-10 用户拍板的「能翻译就翻译，翻译不了就不翻译」。
       # 本地想按老规矩严格拦截：手动跑 check-coverage-gap.py --strict。
-      - name: 精确核对 A 类文案的 key（记账不拦截）
+      - name: 核对 A 类文案的 key（不拦截、不记待办）
+        id: gapcheck
         if: steps.upstream.outputs.needs_sync == 'true' || inputs.force
         run: |
           set -euo pipefail
@@ -261,105 +264,18 @@ jobs:
             --json build/coverage.json > /dev/null
           python3 scripts/tools/check-coverage-gap.py build/coverage.json \
             --gaps-out build/gaps.json
-
-      # 记账：有未译缺口就开/更新一个 Issue，让人有地方看得见。
-      # 刻意不用 set -e —— 开 Issue 失败（比如权限没给 issues: write）
-      # 不该把已经成功的同步带下水。发布物里已经有同样的信息。
-      - name: 缺口记账（开 / 更新 Issue）
-        id: ledger
-        if: steps.upstream.outputs.needs_sync == 'true' || inputs.force
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          TAG: ${{ steps.upstream.outputs.tag }}
-        run: |
-          set -uo pipefail
-
-          if [ ! -f build/gaps.json ]; then
-            echo "没有 build/gaps.json，跳过。"
-            echo "gaps=0" >> "$GITHUB_OUTPUT"
-            exit 0
+          # 把条数交给下面「汇总」那一步展示（纯透明，不代表要人处理）。
+          # 赋值必须显式兜底：set -euo pipefail 下命令替换失败会让这一步直接死掉。
+          GAPS="$(python3 -c "import json;print(json.load(open('build/gaps.json'))['missing_contentful'])" 2>/dev/null || true)"
+          if [ -z "$GAPS" ]; then
+            echo "⚠️ 读不到 build/gaps.json 里的缺口条数，按 0 记。"
+            GAPS=0
           fi
-
-          N="$(python3 -c "import json;print(json.load(open('build/gaps.json'))['missing_contentful'])")"
-          echo "gaps=$N" >> "$GITHUB_OUTPUT"
-
-          if [ "$N" -eq 0 ]; then
-            echo "✅ 本轮没有带实际内容的缺口，不需要记账。"
-            # 之前开过的提醒可以关掉了
-            OLD="$(gh issue list --repo "$REPO" --label 待翻译 --state open \
-                     --json number --jq '.[0].number' 2>/dev/null || true)"
-            if [ -n "$OLD" ]; then
-              if OUT="$(gh issue close "$OLD" --repo "$REPO" \
-                          --comment "本轮同步（${TAG}）后 A 类缺口已清零，关闭。" 2>&1)"; then
-                echo "   已关闭 Issue #$OLD"
-              else
-                echo "   ⚠️ 关闭 Issue #$OLD 失败（不影响同步）：$OUT"
-              fi
-            fi
-            exit 0
-          fi
-
-          echo "⚠️ 有 $N 条带实际内容的未译文案，开/更新 Issue 记账。"
-
-          BODY="$(python3 - <<'PY'
-          import json
-          d = json.load(open('build/gaps.json'))
-          print("上游同步时发现 **%d 条** A 类文案没有译文。" % d['missing_contentful'])
-          print()
-          print("这些是「源码里直接写成字面量、语言包本可以翻」的文案 ——")
-          print("也就是本项目的真实缺口，不是外挂方案的固有限制。")
-          print()
-          print("| 项 | 值 |")
-          print("| --- | --- |")
-          print("| A 类文案总数 | %s |" % d.get('distinct_strings'))
-          print("| 已覆盖 | %s |" % d.get('covered'))
-          print("| 覆盖率 | %s%% |" % d.get('coverage_percent'))
-          print("| 带实际内容的缺口 | %d |" % d['missing_contentful'])
-          print()
-          print("## 缺哪些")
-          print()
-          for k in d['missing_keys']:
-              print("- `%s`" % k)
-          print()
-          print("## 怎么修")
-          print()
-          print("1. 配了 `LLM_API_KEY` 的话，这些通常会被自动翻掉；还剩下说明模型没处理，")
-          print("   看「术语表优先 + LLM 兜底补译文」那一步的日志。")
-          print("2. 手动补：把 `key<TAB>译文` 加进 `translations/curated.tsv`。")
-          print("3. 确认不用翻：把 key 加进 `translations/never-translate.txt`。")
-          print("4. 插值文案（源码写成 `\"... \\(x) ...\"`）：真实格式符登记到")
-          print("   `scripts/tools/key-type-hints.json`，否则补出来的 key 可能是错的。")
-          print()
-          print("---")
-          print()
-          print("> 本 Issue 由 CI 自动开/更新与关闭，修完下一轮同步会自动结掉。")
-          print("> 流水线**不会**因为这些问题中断 —— 能翻的已经发布出去了。")
-          PY
-          )"
-
-          NUM="$(gh issue list --repo "$REPO" --label 待翻译 --state open \
-                   --json number --jq '.[0].number' 2>/dev/null || true)"
-          if [ -n "$NUM" ]; then
-            if OUT="$(printf '%s' "$BODY" | gh issue edit "$NUM" --repo "$REPO" \
-                        --title "待翻译：${N} 条（上游 ${TAG}）" --body-file - 2>&1)"; then
-              echo "   已更新 Issue #$NUM"
-            else
-              echo "   ⚠️ 更新 Issue #$NUM 失败：$OUT"
-            fi
+          echo "gaps=$GAPS" >> "$GITHUB_OUTPUT"
+          if [ "$GAPS" -eq 0 ]; then
+            echo "✅ A 类文案本轮全部有译文。"
           else
-            # label 不存在的话 gh 会直接报错，先无脑建一个（已存在会失败，忽略即可）
-            gh label create 待翻译 --repo "$REPO" \
-              --description "上游同步后仍未翻译的文案" \
-              --color FBCA04 >/dev/null 2>&1 || true
-            if OUT="$(printf '%s' "$BODY" | gh issue create --repo "$REPO" \
-                        --title "待翻译：${N} 条（上游 ${TAG}）" \
-                        --label 待翻译 --body-file - 2>&1)"; then
-              echo "   已新建 Issue：$OUT"
-            else
-              echo "   ⚠️ 新建 Issue 失败：$OUT"
-              echo "      （多半是工作流权限里没给 issues: write —— 不影响同步本身）"
-            fi
+            echo "ℹ️ ${GAPS} 条没译上，已跳过（界面上会显示英文，其余不受影响）。"
           fi
 
       # ------------------------------------------------------------ 6. 更新状态
@@ -456,7 +372,7 @@ jobs:
           git add zh-Hans.lproj translations state appcast.xml scripts
           git commit -m "sync: 跟随上游 ${TAG}（${VERSION}）更新语言包" \
             -m "自动同步：扫描上游 ${TAG} 源码 -> 术语表优先 + LLM 兜底补译 -> 校验通过。" \
-            -m "详见 state/upstream.json 与 state/pending/。" || echo "没有可提交内容。"
+            -m "详见 state/upstream.json。" || echo "没有可提交内容。"
           git push
 
       # ------------------------------------------------------------ 9. 发 Release
@@ -606,7 +522,7 @@ jobs:
             dist/*.zip
             dist/*.command
             dist/RELEASE_NOTES.md
-            state/pending/untranslated.tsv
+            build/gaps.json
           if-no-files-found: ignore
           retention-days: 30
 
@@ -622,10 +538,13 @@ jobs:
             echo "| 需要同步 | ${{ steps.upstream.outputs.needs_sync }} |"
             echo "| 语言包词条 | ${{ steps.state.outputs.total }} 条 |"
             echo "| 覆盖率 | ${{ steps.state.outputs.pct }}%（${{ steps.state.outputs.covered }}/${{ steps.state.outputs.found }}） |"
-            echo "| 带实际内容的缺口 | ${{ steps.ledger.outputs.gaps }} 条 |"
+            echo "| 没译上的（已跳过） | ${{ steps.gapcheck.outputs.gaps }} 条 |"
             echo "| 语言包有改动 | ${{ steps.diff.outputs.changed }} |"
             echo ""
             echo "本轮已做的自动维护：同步插值格式符提示表、清理上游删掉的失效 key、"
-            echo "术语表/LLM 补译。未译完的记在 \`state/pending/untranslated.tsv\`"
-            echo "（缺口不会中断发布）。"
+            echo "术语表/LLM 补译。"
+            echo ""
+            echo "**能翻的已经自动翻好并发布；翻不了的直接跳过** —— 不写待办清单、"
+            echo "不开 Issue、不需要人工确认（2026-10-10 起）。"
+            echo "没译上的清单只在本次运行的构建产物 \`gaps.json\` 里，供排查用。"
           } >> "$GITHUB_STEP_SUMMARY"

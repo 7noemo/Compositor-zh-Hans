@@ -20,11 +20,13 @@
 #    7. Release 说明能生成
 #    8. workflow YAML 能解析
 #    9. Release 附件名必须是纯 ASCII（GitHub 会改写非 ASCII 附件名）
+#       9.4/9.5 顺带守住一条策略：**不得再出现「人工确认」环节**
+#       —— 不能有开/改 Issue 的步骤、不能有 state/pending/ 待办清单
 #   10. （可选 --src）拿上游源码做**精确**覆盖率：
 #       10.1 覆盖率不能低于阈值
-#       10.2 缺口门禁按 CI 的宽松模式跑（有缺口只警告记账、不红），
+#       10.2 核对工具按 CI 的方式跑（有缺口只报告跳过、不红），
 #            另外用**合成数据**验证严格模式真的会在有真缺口时退出码 1
-#            —— 直接跑宽松模式是永远通过的，不这么测就等于没查
+#            —— 直接跑默认模式是永远通过的，不这么测就等于没查
 #       10.3 提示表自动维护工具（sync_hints.py）能跑通
 #       10.4 孤儿 key 清理工具（prune_obsolete.py）能跑通
 #       10.5 四个工具都复用 analyze_coverage 里的插值算法 ——
@@ -435,8 +437,36 @@ if [ -f "$WF" ]; then
   else
     bad "workflow 缺少附件名核对：GitHub 改写附件名不报错，必须有反查"
   fi
+  # 9.4 2026-10-10 用户拍板：**取消人工确认** —— 能翻的自动翻，翻不了的直接跳过。
+  #     这条断言是防复发的闸：一旦有人把「开 Issue 记待办」加回来，
+  #     「每轮必须有人看一眼」的尾巴就重新长出来了，而那正是这次拆掉的东西。
+  #     比对前先把整行注释剥掉：permissions 那段注释里就写着「不要 issues 权限」，
+  #     不剥的话断言会命中自己的说明文字。（另外本文件自身也要排除，见约束 8。）
+  grep -v '^[[:space:]]*#' "$WF" > "$WORK/wf-code.txt" || true
+  HIT_ISSUE="$(grep -nE 'gh issue |^[[:space:]]+issues:' "$WORK/wf-code.txt" || true)"
+  if [ -n "$HIT_ISSUE" ]; then
+    bad "workflow 里又出现了「人工确认」环节（开 Issue 或 issues 权限）："
+    printf '%s\n' "$HIT_ISSUE" | sed 's/^/     /'
+  else
+    ok "workflow 里没有开 Issue / 请求 issues 权限的步骤"
+  fi
 else
   warn "找不到 ${WF}，跳过"
+fi
+
+# 9.5 工具与仓库里都不能再有「待办清单」—— 它同样是人工确认入口
+PEND_HIT="$(grep -rnE 'state/pending|PENDING_DIR' \
+              --exclude='selfcheck.sh' scripts 2>/dev/null || true)"
+if [ -n "$PEND_HIT" ]; then
+  bad "又有工具在写待办清单（人工确认入口）："
+  printf '%s\n' "$PEND_HIT" | sed 's/^/     /'
+else
+  ok "没有工具再写 state/pending（待办清单已取消）"
+fi
+if [ -e state/pending ]; then
+  bad "state/pending/ 还在：人工确认入口已取消，不该再有待办清单"
+else
+  ok "仓库里没有 state/pending/（待办清单已取消）"
 fi
 
 # ---------------------------------------------------------------- 10. 覆盖率
@@ -463,11 +493,11 @@ import json;print(json.load(open('build/coverage.json'))['translatable']['covera
         bad "覆盖率 ${PCT}% 低于阈值 ${MIN_COVERAGE}% —— 有新增文案没翻？"
       fi
 
-      # 10.2 缺口门禁。
-      #      2026-10-10 起 CI 改用「宽松模式」：有未译文案只记账（写
-      #      build/gaps.json、开 Issue、写进 Release 说明），**不再中断流水线** ——
-      #      以前有缺口就退出码 1，于是上游加一条新文案就让整条流水线永久卡死等人修。
-      #      副作用是宽松模式永远返回 0，直接跑它等于没查。所以这里：
+      # 10.2 缺口核对。
+      #      2026-10-10 起 CI 用的默认模式是「只看不拦、不留待办」：有未译文案
+      #      只写 build/gaps.json（不入库）并在日志里报个条数，**既不中断流水线，
+      #      也不写待办清单、不开 Issue** —— 能翻的自动翻，翻不了的直接跳过。
+      #      副作用是默认模式永远返回 0，直接跑它等于没查。所以这里：
       #        a) 先按 CI 的方式跑一遍（其实永远通过，但会把缺口清单打出来）
       #        b) 再用**合成数据**验证严格模式确实会在有真缺口时退出码 1
       if "$PY" scripts/tools/check-coverage-gap.py build/coverage.json \
@@ -478,7 +508,7 @@ import json;print(json.load(open('build/gaps.json'))['missing_contentful'])" 2>/
         if [ "$GAPN" = "0" ]; then
           ok "A 类缺口只剩无实际内容的文案"
         else
-          warn "有 ${GAPN} 条带实际内容的缺口 —— 不拦你，CI 会照常发布并记账（见上）"
+          warn "有 ${GAPN} 条带实际内容的缺口 —— 不拦你，CI 照常发布、这几条直接跳过（见上）"
         fi
       else
         sed 's/^/     /' "$WORK/gap.out"
@@ -511,14 +541,22 @@ json.dump({'translatable': {'distinct_strings': 10, 'covered': 9,
       else
         bad "严格模式判定不对：有真缺口应得 1 实际 ${RC1}，只有符号缺口应得 0 实际 ${RC0}"
       fi
-      # 宽松模式对同一份「有真缺口」的数据必须放行，否则 CI 又会被卡住
+      # 10.2c 默认模式对同一份「有真缺口」的数据必须放行 ——
+      #       不放行的话 CI 又会因为缺口永久卡死（这是最初那个 bug）
       RCW=0
       "$PY" scripts/tools/check-coverage-gap.py "$WORK/cov-real-gap.json" \
         --gaps-out "$WORK/g1.json" >/dev/null 2>&1 || RCW=$?
       if [ "$RCW" -eq 0 ]; then
-        ok "宽松模式对未译缺口不拦截（CI 不会被卡住）"
+        ok "默认模式对未译缺口不拦截（CI 不会被卡住）"
       else
-        bad "宽松模式居然退出码 ${RCW} —— 那 CI 又会因为缺口永久卡死"
+        bad "默认模式居然退出码 ${RCW} —— 那 CI 又会因为缺口永久卡死"
+      fi
+      # 10.2d 顺带确认它真的**只**写 build/gaps.json，没有顺手留下待办文件 ——
+      #       「翻不了就跳过」的承诺必须在这一步落地，不然 9.5 也只是事后补救
+      if [ -e state/pending ]; then
+        bad "跑完缺口核对后凭空出现了 state/pending/ —— 待办清单不该再被创建"
+      else
+        ok "缺口核对没有创建任何待办清单"
       fi
 
       # 10.3 / 10.4 两个自动维护工具必须能跑通（都走 --dry-run，无副作用）

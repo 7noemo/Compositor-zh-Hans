@@ -253,7 +253,8 @@ codesign --force --sign - --deep /Applications/Compositor.app
 这个数字是**精确核对**出来的，不是「差不多对上了」：工具会把每条源码文案按
 SwiftUI 的运行时规则算成真实 key（`"Close \(x)"` → `Close %@`），
 要求语言包里逐字符存在。CI 里 `scripts/tools/check-coverage-gap.py` 会逐条核对，
-缺口**不会**被静默放过 —— 但也**不再中断发布**（见下方「上游发新版之后会发生什么」）。
+结果写在运行日志与 Release 说明里。核对不拦发布，也**不留待办**：
+能翻的自动翻，翻不了的直接跳过（见下方「上游发新版之后会发生什么」）。
 
 > **关于插值文案（40 条，也是最容易出错的一类）**
 >
@@ -521,7 +522,9 @@ SwiftUI 查表用的是**运行时算出来的 key**，不是源码里那串字�
   用来重排参数，例如 `"%@ of %@." = "%2$@的%1$@。"`）
 - 40 条插值文案的真实格式符登记在 `scripts/tools/key-type-hints.json`，
   不靠猜
-- CI 与自检都会在出现「带实际内容的缺口」时直接失败
+- CI 会把「带实际内容的缺口」列出来并报个条数（在运行日志、构建产物
+  `gaps.json` 与 Release 说明里），但**不拦截发布、也不留待办** ——
+  翻不了的就不翻，没有人需要被叫来处理。想严格拦截就本地加 `--strict`
 
 所以如果你现在还能看到某个词条有译文却不生效，**那就是个新 bug**，
 欢迎带着截图提 issue。
@@ -638,16 +641,16 @@ Compositor-zh-Hans/
 │   └── tools/
 │       ├── extract_strings.py       全量扫描界面文案 + 与语言包做差集
 │       ├── analyze_coverage.py      统计「外挂能翻多少」的权威口径（A/B 类，精确匹配）
-│       ├── check-coverage-gap.py    缺口核对：默认只记账不拦截（--strict 才退出码 1）
+│       ├── check-coverage-gap.py    缺口核对：只看不拦、不留待办（--strict 才退出码 1）
 │       ├── sync_hints.py            自动维护下面的提示表（迁移 + 剪枝，无需人工）
 │       ├── prune_obsolete.py        清掉上游删掉/改名后留下的孤儿 key
 │       ├── key-type-hints.json      40 条插值文案的真实格式符表（%@/%lld/%lf）
 │       ├── strings_syntax.py        .strings 语法检查的唯一实现（本地 plutil / CI 纯 Python）
-│       ├── translate_missing.py     术语表优先 + LLM 兜底（只翻 A 类）
+│       ├── translate_missing.py     术语表优先 + LLM 兜底（只翻 A 类，翻不了就跳过）
 │       ├── merge_translations.py    把译文合并进语言包
 │       ├── check-strings.py         校验格式 / 重复 key / 占位符一致性 / key 禁带序号
 │       ├── update_state.py          写回 state/upstream.json
-│       ├── make_release_notes.py    生成 Release 说明（含本轮缺口记账）
+│       ├── make_release_notes.py    生成 Release 说明（含本轮漏翻条数）
 │       └── lint-shell.py            shell 雷区检查（见下方「踩过的坑」）
 ├── translations/
 │   ├── glossary.tsv                 术语表（按 Photoshop 中文版用词）
@@ -656,8 +659,7 @@ Compositor-zh-Hans/
 │   └── never-translate.txt          确认不翻译的（PSD 常量、商品名…）
 ├── state/
 │   ├── upstream.json                上游版本与本仓库统计
-│   ├── upstream-a-keys.json         上一轮扫到的 A 类文案原文（孤儿 key 清理的基线）
-│   └── pending/untranslated.tsv     待人工处理的词条
+│   └── upstream-a-keys.json         上一轮扫到的 A 类文案原文（孤儿 key 清理的基线）
 └── .github/workflows/
     └── sync-upstream.yml            定时跟随上游 → 更新语言包 → 发 Release
 ```
@@ -681,16 +683,18 @@ Compositor-zh-Hans/
 ⑩  提交、发 Release（tag 形如 lang-v1.4.9）
 ```
 
-**关键：第 ⑨ 步有缺口也不拦你。** 缺口只「记账」——写进 `state/pending/`、
-写进 Release 说明，并开/更新一个 `待翻译` Issue，然后照常发布、照常推进版本号。
+**关键：第 ⑨ 步有缺口也不拦你，也不留待办 —— 能翻的翻，翻不了的直接跳过。**
+核对结果只在 Actions 日志、构建产物 `gaps.json` 和 Release 说明里报个条数，
+**不写待办清单、不开 Issue、没有人会被叫去处理**。
 
-> 为什么这么改：以前有缺口就退出码 1，于是不提交、不发布、`state/upstream.json`
-> 也不推进 —— 6 小时后再跑条件一模一样，**只要上游加一条新文案，整条流水线就
-> 永久卡死等人来修**（实测连续红了 4 次，每次都要人工 grep 源码补译文）。
-> 现在能翻的先发布出去，翻不掉的留个明确的账，不再需要人守着。
+> 为什么不留待办：最早是「有缺口就退出码 1」，于是不提交、不发布、
+> `state/upstream.json` 也不推进 —— 6 小时后再跑条件一模一样，
+> **只要上游加一条新文案，整条流水线就永久卡死等人来修**（实测连续红了 4 次）。
+> 后来改成「记账 + 开 Issue 等人看」，那只是把「每轮必须有人看一眼」换了个形式。
+> 现在（2026-10-10 起）缺口既不拦发布、也不记待办：翻不了的就不翻。
 > 本地想按老规矩严格拦截：`python3 scripts/tools/check-coverage-gap.py build/coverage.json --strict`
 
-**要做到「零人工」，还需要配一个 LLM key**（第 ⑥ 步的兜底）：
+**想让它「能翻的都翻掉」，建议配一个 LLM key**（第 ⑥ 步的兜底）：
 
 ```bash
 gh secret set LLM_API_KEY      # 粘贴你的 key
@@ -698,7 +702,8 @@ gh variable set LLM_BASE_URL --body 'https://api.deepseek.com/v1'   # 换成你�
 gh variable set LLM_MODEL    --body 'deepseek-chat'
 ```
 
-不配也能跑：术语表命中的照补，其余是「记账 + 等人」。配了就是真的无人值守。
+不配也能跑，只是术语表命不中的那几条会一直显示英文（不会有人被叫去处理）。
+配了之后新文案就真的不用管了。
 
 另外有三件事以前要人工做、现在全自动了：
 
@@ -720,7 +725,7 @@ bash scripts/fetch-upstream.sh v1.4.9
 # 看「外挂到底能翻多少」——这是最该关注的那个数字（精确匹配口径）
 python3 scripts/tools/analyze_coverage.py _upstream --json build/coverage.json
 
-# 看有没有缺口（默认只记账不拦截；加 --strict 才是「有缺口就退出码 1」）
+# 看有没有缺口（只看不拦、不留待办；加 --strict 才是「有缺口就退出码 1」）
 python3 scripts/tools/check-coverage-gap.py build/coverage.json
 python3 scripts/tools/check-coverage-gap.py build/coverage.json --strict
 
@@ -767,7 +772,7 @@ git add -A && git commit -m '设置仓库地址' && git push
 #      Secret:   LLM_API_KEY
 #      Variable: LLM_BASE_URL（默认 https://api.openai.com/v1）
 #      Variable: LLM_MODEL（默认 gpt-4o-mini）
-#    不配也能跑：术语表命中的照补，其余留在 state/pending/ 等人工过。
+#    不配也能跑：术语表命中的照补，其余直接跳过（不再留待办、不开 Issue）。
 
 # 4. 手动跑一次 Actions → Sync upstream translations
 #    第一次会因为没有 lang-v* Release 而强制出一版，之后按上游版本走。
