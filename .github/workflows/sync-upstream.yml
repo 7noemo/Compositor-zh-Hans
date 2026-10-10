@@ -212,6 +212,19 @@ jobs:
           LLM_MODEL:    ${{ vars.LLM_MODEL || 'gpt-4o-mini' }}
         run: |
           set -euo pipefail
+          # 先跑一遍**离线**自检（不联网、不用 key，约 0.2 秒）。
+          # 为什么要在这里查：这个模块的失效方式是「静默跳过一整批」——
+          # 2026-10-10 实测，llm_translate 因为参数传字符串列表、实现按元组
+          # 解包，首次调用就抛 ValueError，而该异常类型恰好在调用处的 except
+          # 里，于是被吞掉、全部跳过。配上 key 之前这段代码从没执行过，所以
+          # 它坏不坏**不会让任何检查变红**，只会让译文凭空消失。
+          #
+          # 只告警、不阻断：这是一条代码缺陷的探测，不是内容缺口。
+          # 真把它当门禁的话，「代码坏了 → 流水线停摆 → state 不推进」
+          # 就又成了刚拆掉的那个死循环。用 ::warning:: 让它出现在运行页面上。
+          if ! python3 scripts/tools/translate_missing.py --selftest-llm; then
+            echo "::warning title=LLM 翻译链路自检未通过::llm_translate/keys_ok 的接口或校验坏了 —— 本轮新增文案会被静默跳过，请修 scripts/tools/translate_missing.py"
+          fi
           python3 scripts/tools/translate_missing.py
 
       - name: 合并译文进语言包

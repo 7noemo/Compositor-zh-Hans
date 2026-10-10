@@ -588,8 +588,9 @@ SwiftUI 查表用的是**运行时算出来的 key**，不是源码里那串字�
 安装脚本唯一的网络行为是从本仓库下载语言包
 （以及在你没装官方版时，从上游下载官方安装包）。
 
-唯一的例外在 CI 那边：如果仓库维护者配置了 `LLM_API_KEY`，
-流水线会用大模型翻译新增的界面短语，发出去的内容只有英文短语本身，不含任何用户数据。
+唯一的例外在 CI 那边：维护者配置了 `LLM_API_KEY`（本仓库用 DeepSeek），
+流水线会用大模型翻译新增的界面短语；发出去的内容只有英文短语本身，不含任何用户数据。
+**不配也能跑** —— 术语表命中的照补，其余的直接跳过。
 </details>
 
 <details>
@@ -637,7 +638,7 @@ Compositor-zh-Hans/
 │   ├── fetch-upstream.sh            下载上游源码 tarball（只为扫文案）
 │   ├── make-langpack.sh             打包发布用的语言包 zip（内含上面两个脚本）
 │   ├── set-repo.sh                  把 __REPO__ 占位符换成你的仓库地址
-│   ├── selfcheck.sh                 提交前一键自检（10 项）
+│   ├── selfcheck.sh                 提交前一键自检（11 项）
 │   └── tools/
 │       ├── extract_strings.py       全量扫描界面文案 + 与语言包做差集
 │       ├── analyze_coverage.py      统计「外挂能翻多少」的权威口径（A/B 类，精确匹配）
@@ -694,16 +695,22 @@ Compositor-zh-Hans/
 > 现在（2026-10-10 起）缺口既不拦发布、也不记待办：翻不了的就不翻。
 > 本地想按老规矩严格拦截：`python3 scripts/tools/check-coverage-gap.py build/coverage.json --strict`
 
-**想让它「能翻的都翻掉」，建议配一个 LLM key**（第 ⑥ 步的兜底）：
+**LLM key 已经配好**（第 ⑥ 步的兜底，本仓库用 DeepSeek）：
 
 ```bash
-gh secret set LLM_API_KEY      # 粘贴你的 key
-gh variable set LLM_BASE_URL --body 'https://api.deepseek.com/v1'   # 换成你要用的服务
-gh variable set LLM_MODEL    --body 'deepseek-chat'
+gh secret set LLM_API_KEY                                            # 已设置
+gh variable set LLM_BASE_URL --body 'https://api.deepseek.com/v1'    # 已设置
+gh variable set LLM_MODEL    --body 'deepseek-chat'                  # 已设置
 ```
 
+换服务只要改这两个 Variable（任何 OpenAI 兼容接口都行），Secret 重新 set 一次即可。
 不配也能跑，只是术语表命不中的那几条会一直显示英文（不会有人被叫去处理）。
-配了之后新文案就真的不用管了。
+
+> ⚠️ 2026-10-10 配 key 时实测发现：**LLM 兜底这条路从来没真正跑通过**
+> —— `llm_translate` 首次调用就抛 `ValueError`，而该异常类型恰好在调用处的
+> `except` 里，于是被静默吞掉、整批跳过。也就是说，在那之前即使配了 key，
+> 结果也是「新增文案全是英文，日志只说一句调用失败」。现已修好，并且
+> `selfcheck.sh` 第 11 项会离线守着这条链路（不联网、不需要 key）。
 
 另外有三件事以前要人工做、现在全自动了：
 
@@ -741,8 +748,11 @@ python3 scripts/tools/translate_missing.py
 python3 scripts/tools/merge_translations.py translations/curated.tsv translations/auto.tsv
 python3 scripts/tools/check-strings.py
 
-# 提交前跑一遍自检（10 项 / 约 30 条子检查，含 shell 雷区、孤儿清理与覆盖率）
+# 提交前跑一遍自检（11 项 / 约 38 条子检查，含 shell 雷区、孤儿清理与覆盖率）
 bash scripts/selfcheck.sh --src _upstream
+
+# 只想验一下 LLM 翻译链路有没有坏（不联网、不需要 key，0.2 秒）
+python3 scripts/tools/translate_missing.py --selftest-llm
 ```
 
 想启用 LLM 兜底翻译，本地这样跑：
@@ -752,6 +762,12 @@ LLM_API_KEY=sk-xxx LLM_MODEL=deepseek-chat \
   LLM_BASE_URL=https://api.deepseek.com/v1 \
   python3 scripts/tools/translate_missing.py --llm
 ```
+
+> **为什么有那条离线自检**：`llm_translate` 曾经在**首次调用就抛 `ValueError`**
+> （调用点传字符串列表，函数内部按 `for k, _ in items` 解包），而这个异常类型
+> 恰好在调用处的 `except` 里 → 被静默吞掉、整批跳过。配上 key 之前这段代码
+> 从没执行过，所以它坏不坏**不会让任何检查变红**，只会让译文凭空消失。
+> 现在 `selfcheck.sh` 第 11 项和 CI 的补译步骤都会跑它（CI 里只告警不阻断）。
 </details>
 
 <details>
@@ -846,6 +862,23 @@ YAML 会把它当别名解析并报错。复杂的多行逻辑一律抽成独立
 早期版本的 `selfcheck.sh` 会真的调用 `install.sh` 来验证参数守卫 ——
 结果它把用户 `/Applications` 里的 app 重新注入并重签了一遍。
 现在所有会改动真实安装的检查都改成静态检查，或者用不存在的路径确保提前退出。
+
+**⑧ 没被执行过的代码路径，等于没有覆盖率；「静默失效」比报错危险得多**
+
+`translate_missing.py` 的 LLM 兜底从写下那天起就没真正跑通过：调用点传的是
+字符串列表，函数内部却按 `for k, _ in items` 解包 → **首次调用就抛 `ValueError`**，
+而 `ValueError` 恰好在调用处的 `except` 列表里 → 被吞掉、整批跳过，
+日志里只留一行「调用失败」。因为仓库当时没配 `LLM_API_KEY`，这段代码从未进入
+执行，**所有检查都是绿的**。2026-10-10 真正配上 key 做实测才暴露出来。
+
+两条教训：
+
+* `except` 里不要顺手写宽泛类型（`ValueError` / `Exception`）—— 它会把「接口写错」
+  这类**编程错误**一起吞掉，而那本该是当场崩溃、立刻发现的。
+* 有条件才执行的路径，必须有**不依赖该条件**的自检。现在
+  `translate_missing.py --selftest-llm` 用合成响应跑通接口 / 请求体 / 响应解析 /
+  三道校验，不联网也不需要 key，已接进 `selfcheck.sh` 第 11 项；
+  CI 的补译步骤也会跑它（用 `::warning::` 标注，只告警不阻断）。
 
 **⑧ `codesign --verify --strict` 对带 Sparkle 的 app 会误报**
 

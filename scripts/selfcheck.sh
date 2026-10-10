@@ -31,6 +31,9 @@
 #       10.4 孤儿 key 清理工具（prune_obsolete.py）能跑通
 #       10.5 四个工具都复用 analyze_coverage 里的插值算法 ——
 #            一旦抄成两份，必然又出「本地绿、CI 红」
+#   11. LLM 翻译链路的**离线**自检（不联网、不需要 API Key）
+#       —— 这条链路曾经在首次调用就抛异常、又被 except 静默吞掉，
+#          而当时没配 key 所以从没执行过，连 CI 都发现不了
 #
 set -euo pipefail
 
@@ -601,6 +604,23 @@ json.dump({'translatable': {'distinct_strings': 10, 'covered': 9,
   fi
 else
   warn "未传 --src 且没有 _upstream/，跳过覆盖率检查（先跑 bash scripts/fetch-upstream.sh）"
+fi
+
+# ------------------------------------------------ 11. LLM 翻译链路（离线自检）
+head1 "11. LLM 翻译链路（离线）"
+# 2026-10-10：llm_translate 曾经在**首次调用就抛 ValueError**
+#（调用点传的是字符串列表，函数内部却按 `for k, _ in items` 解包），
+# 而这个异常类型恰好躺在调用处的 except 里 → 被静默吞掉、整批跳过。
+# 仓库当时没配 LLM_API_KEY，这段代码从没执行过，所以连 CI 都发现不了它。
+#
+# 教训：这段代码的失效**不会**让任何检查变红，只会让译文凭空消失。
+# 想不重犯就得有一条不依赖 key、不依赖网络的路径去跑它。合成响应即可覆盖
+# 参数接口 / 请求体 / 响应解析 / 幻觉 key 与占位符的三道拦截。
+if OUT="$("$PY" scripts/tools/translate_missing.py --selftest-llm 2>&1)"; then
+  ok "LLM 调用链离线自检通过（接口 / 请求体 / 解析 / 三道拦截）"
+else
+  bad "LLM 调用链离线自检未通过 —— 配上 key 也会静默跳过全部新文案："
+  printf '%s\n' "$OUT" | sed 's/^/     /'
 fi
 
 # ---------------------------------------------------------------- 收尾
