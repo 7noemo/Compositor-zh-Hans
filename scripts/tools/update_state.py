@@ -86,7 +86,7 @@ def main():
     loc.pop("last_build", None)
 
     note = "手动强制同步" if args.force else "上游发新版，自动同步"
-    st.setdefault("history", []).insert(0, {
+    entry = {
         "tag": args.tag,
         "version": args.version,
         "synced_at": today,
@@ -94,8 +94,18 @@ def main():
         "coverage_percent": loc.get("coverage_percent"),
         "release_tag": args.release_tag or None,
         "note": note,
-    })
-    st["history"] = st["history"][:30]
+    }
+    # 同一个 (tag, 日期, 来源) 只留一条 —— 否则每次 `-f force=true` 验证都会
+    # 往历史里追加一条一模一样的（v1.4.6 攒到过 4 条、v1.4.9 攒到 2 条）。
+    # 命中时原地覆盖，好让统计数字刷新成最新一轮的值。
+    hist = st.setdefault("history", [])
+    key = (entry["tag"], entry["synced_at"], entry["note"])
+    if hist and (hist[0].get("tag"), hist[0].get("synced_at"),
+                 hist[0].get("note")) == key:
+        hist[0] = entry
+    else:
+        hist.insert(0, entry)
+    st["history"] = hist[:30]
 
     with open(args.state, "w", encoding="utf-8") as fh:
         json.dump(st, fh, ensure_ascii=False, indent=2)
