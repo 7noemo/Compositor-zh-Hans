@@ -546,6 +546,19 @@ def main():
     if skipped:
         print("   （原因通常是：术语表未命中且未配 LLM_API_KEY，或模型没给出合格结果。")
         print("    想自己补：把 key<TAB>译文 加进 translations/curated.tsv。）")
+        # CI 里用一条注解把「静默跳过」变成看得见的东西。
+        # 这是本项目最怕的失效方式：一切看起来都成功，只是译文凭空消失 ——
+        # key 过期、额度用尽、上游换接口，表现都是这样。
+        # 刻意用 warning 而不是 error：用户明确要求过「翻不了就不翻」，
+        # 不该因为几条长尾让整条流水线卡住（那正是拆掉的旧行为）。
+        # 也不把具体 key 放进注解：workflow command 里 % 需要转义，
+        # 而界面文案里 %@ / %lld 到处都是，容易转错。指向日志即可。
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            engine = (f"LLM 引擎已配置（{_model}）" if _key
+                      else "LLM 引擎【未配置】")
+            print("::warning title=有 %d 条新增文案没译上::%s"
+                  "，界面会保持英文。详见本步骤日志的「跳过（没译上）」清单。"
+                  % (len(skipped), engine))
     return 0
 
 
