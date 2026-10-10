@@ -436,6 +436,18 @@ def main():
     print(f"词典规模        : 精确 {len(exact)} / 骨架 {len(skel)}")
     print(f"永不翻译清单    : {len(never)} 条")
 
+    # 引擎状态：让「Secret 有没有送达运行器」在 CI 日志里一眼可见。
+    # 为什么值得单独打一行：没配好 key 和「模型没给出合格结果」的表现**完全一样**
+    # —— 都是静默跳过、什么都不说。不打出这一行，出了事只能靠猜。
+    # 注意永远不要打印 key 本身，只报「配没配」和模型/地址。
+    _key = os.environ.get("LLM_API_KEY", "").strip()
+    _model = os.environ.get("LLM_MODEL", "gpt-4o-mini").strip()
+    _base = os.environ.get("LLM_BASE_URL", "https://api.openai.com/v1").strip()
+    if _key:
+        print(f"LLM 引擎        : 已配置 {_model} @ {_base}")
+    else:
+        print("LLM 引擎        : 未配置（只走术语表，其余直接跳过）")
+
     guard, by_glossary, need_llm = [], {}, []
     for k in todo:
         if is_untranslatable(k, never):
