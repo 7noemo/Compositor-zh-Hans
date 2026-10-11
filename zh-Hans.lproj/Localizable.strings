@@ -1360,3 +1360,11 @@
 "Width in pixels; the height follows, keeping the proportions" = "宽度（像素）；高度按比例跟随";
 "Zoom in (⌘+), now %@. At 100% each pixel of the export is one pixel of the screen" = "放大（⌘+），当前 %@。在 100% 时，导出的每个像素对应屏幕的一个像素";
 "sRGB" = "sRGB";
+"Blur only the colors, keeping the layer's outline and transparency as they are" = "仅模糊颜色，保持图层的轮廓和透明度不变";
+"Brings back detail in bright areas the camera partly clipped" = "恢复相机部分裁切的亮部细节";
+"Highlight Recovery" = "高光恢复";
+"Not available for this camera" = "此相机不可用";
+"Preserve Transparency" = "保留透明度";
+"Removes the lens's distortion and vignetting" = "移除镜头的扭曲和晕影";
+"Smooths grain, at the cost of fine detail" = "平滑颗粒，但会损失精细细节";
+"This file has no lens profile" = "此文件没有镜头配置文件";

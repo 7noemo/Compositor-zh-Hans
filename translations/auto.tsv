@@ -1,2 +1,10 @@
 # 由 scripts/tools/translate_missing.py 自动生成，请勿手工编辑。
 # 人工修完请把满意的条目移进 translations/curated.tsv。
+Blur only the colors, keeping the layer's outline and transparency as they are	仅模糊颜色，保持图层的轮廓和透明度不变
+Brings back detail in bright areas the camera partly clipped	恢复相机部分裁切的亮部细节
+Highlight Recovery	高光恢复
+Not available for this camera	此相机不可用
+Preserve Transparency	保留透明度
+Removes the lens's distortion and vignetting	移除镜头的扭曲和晕影
+Smooths grain, at the cost of fine detail	平滑颗粒，但会损失精细细节
+This file has no lens profile	此文件没有镜头配置文件
