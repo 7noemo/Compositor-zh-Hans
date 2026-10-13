@@ -88,7 +88,6 @@
 "Click corners · Click start, double-click or Enter to close · Delete removes corner · Escape cancel" = "点击角点 · 点击起点、双击或 Enter 闭合 · Delete 移除角点 · Escape 取消";
 "Document Bounds" = "文档边界";
 "Open Recent" = "最近使用";
-"Click a shortcut, then press its new key combination. Changes apply when you save." = "点击一个快捷键，然后按下新的组合键。保存后更改生效。";
 "Reading the Photoshop file…" = "正在读取 Photoshop 文件…";
 "Import" = "导入";
 "This Photoshop file uses a format version Compositor can’t read." = "此 Photoshop 文件使用的格式版本 Compositor 无法读取。";
@@ -1386,3 +1385,8 @@
 "The blur where the line ends, and past it" = "直线终点处及其之后的模糊";
 "The blur where the line starts" = "直线起点处的模糊";
 "Use a CMYK ICC profile, such as the one your printer gave you" = "使用 CMYK ICC 配置文件，例如打印机提供的配置文件";
+"Click a shortcut, then press its new key combination, or ⊗ to remove it. Changes apply when you save." = "点击一个快捷键，然后按下新的组合键，或点击 ⊗ 将其移除。更改将在存储时应用。";
+"Import, then open the Camera Raw Filter" = "导入，然后打开 Camera Raw 滤镜";
+"Remove this shortcut" = "移除该快捷键";
+"Reset %@" = "重置 %@";
+"Reset %@ to its defaults" = "将 %@ 重置为默认值";

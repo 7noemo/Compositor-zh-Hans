@@ -1,20 +1,7 @@
 # 由 scripts/tools/translate_missing.py 自动生成，请勿手工编辑。
 # 人工修完请把满意的条目移进 translations/curated.tsv。
-16 bits per channel	每通道 16 位
-CMYK writes a printer's inks through the profile in View › CMYK › Profile	CMYK 通过“视图 › CMYK › 配置文件”中的配置文件来模拟印刷油墨
-Click and drag two points on canvas	在画布上单击并拖动两个点
-Depth	深度
-Gamut Warning	色域警告
-Keep the 16-bit layers' full precision, in a file about twice the size	保留 16 位图层的完整精度，文件大小约为两倍
-Linear blurs along the line; Radial keeps the start sharp and blurs outwards	线性沿直线模糊；径向保持起点清晰并向外模糊
-Load Profile…	载入配置文件…
-More formats	更多格式
-Other formats: TIFF and PDF%@	其他格式：TIFF 和 PDF%@
-Other formats: TIFF and PDF%lf	其他格式：TIFF 和 PDF%lf
-Other formats: TIFF and PDF%lld	其他格式：TIFF 和 PDF%lld
-Profile	配置文件
-Proof Colors	校样颜色
-Swap From and To: blur the start and sharpen toward the end	交换起点和终点：模糊起点并向终点锐化
-The blur where the line ends, and past it	直线终点处及其之后的模糊
-The blur where the line starts	直线起点处的模糊
-Use a CMYK ICC profile, such as the one your printer gave you	使用 CMYK ICC 配置文件，例如打印机提供的配置文件
+Click a shortcut, then press its new key combination, or ⊗ to remove it. Changes apply when you save.	点击一个快捷键，然后按下新的组合键，或点击 ⊗ 将其移除。更改将在存储时应用。
+Import, then open the Camera Raw Filter	导入，然后打开 Camera Raw 滤镜
+Remove this shortcut	移除该快捷键
+Reset %@	重置 %@
+Reset %@ to its defaults	将 %@ 重置为默认值
