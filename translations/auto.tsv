@@ -1,7 +1,5 @@
 # 由 scripts/tools/translate_missing.py 自动生成，请勿手工编辑。
 # 人工修完请把满意的条目移进 translations/curated.tsv。
-Click a shortcut, then press its new key combination, or ⊗ to remove it. Changes apply when you save.	点击一个快捷键，然后按下新的组合键，或点击 ⊗ 将其移除。更改将在存储时应用。
-Import, then open the Camera Raw Filter	导入，然后打开 Camera Raw 滤镜
-Remove this shortcut	移除该快捷键
-Reset %@	重置 %@
-Reset %@ to its defaults	将 %@ 重置为默认值
+Fill color	填充颜色
+Set a radius above 0 to use smooth corners.	将半径设置为大于 0 的值以使用平滑圆角。
+Smooth Corners	平滑圆角

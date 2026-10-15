@@ -1390,3 +1390,6 @@
 "Remove this shortcut" = "移除该快捷键";
 "Reset %@" = "重置 %@";
 "Reset %@ to its defaults" = "将 %@ 重置为默认值";
+"Fill color" = "填充颜色";
+"Set a radius above 0 to use smooth corners." = "将半径设置为大于 0 的值以使用平滑圆角。";
+"Smooth Corners" = "平滑圆角";
