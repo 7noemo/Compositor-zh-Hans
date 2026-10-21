@@ -59,8 +59,6 @@
 "Export…" = "导出…";
 "Export PNG…" = "导出 PNG…";
 "Export JPEG…" = "导出 JPEG…";
-"Import image" = "导入图像";
-"Import Images…" = "导入图像…";
 "Importing images…" = "正在导入图像…";
 "Import couldn’t finish" = "导入无法完成";
 "Project tabs" = "项目标签";
@@ -158,12 +156,10 @@
 "New Canvas" = "新建画布";
 "Couldn’t change canvas size" = "无法更改画布大小";
 "Couldn’t resize the image" = "无法调整图像大小";
-"Create a canvas or import an image." = "创建画布或导入图像。";
 "Drag to crop · Enter apply · Escape cancel · Space to pan" = "拖拽裁剪 · Enter 应用 · Escape 取消 · Space 平移";
 "Canvas" = "画布";
 "Canvas Extension" = "画布扩展";
 "Untitled" = "未命名";
-"Import an image or add a blank layer." = "导入图像或添加空白图层。";
 "Choose a JPEG, PNG, HEIC, or TIFF image." = "请选择 JPEG、PNG、HEIC 或 TIFF 图像。";
 "Transparent canvas · sRGB" = "透明画布 · sRGB";
 "Background color" = "背景色";
@@ -1393,3 +1389,12 @@
 "Fill color" = "填充颜色";
 "Set a radius above 0 to use smooth corners." = "将半径设置为大于 0 的值以使用平滑圆角。";
 "Smooth Corners" = "平滑圆角";
+"Create a canvas or import a file." = "创建画布或导入文件。";
+"How the line's ends, and each of its dashes and dots, are finished" = "线条端点及其各虚线和点的收尾方式";
+"Import a file or add a blank layer." = "导入文件或添加空白图层。";
+"Import…" = "导入…";
+"Pen pressure sets the opacity: a light touch paints fainter, up to the brush’s Opacity" = "钢笔压力控制不透明度：轻触绘制更淡，最高可达画笔的不透明度";
+"Pen pressure sets the size: a light touch paints a thinner line" = "钢笔压力控制大小：轻触绘制更细的线条";
+"Pressure for opacity" = "压力控制不透明度";
+"Pressure for size" = "压力控制大小";
+"Solid, dashed or dotted; dashes grow with the line's width" = "实线、虚线或点线；虚线随线条宽度增大";

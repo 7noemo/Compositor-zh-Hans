@@ -1,5 +1,11 @@
 # 由 scripts/tools/translate_missing.py 自动生成，请勿手工编辑。
 # 人工修完请把满意的条目移进 translations/curated.tsv。
-Fill color	填充颜色
-Set a radius above 0 to use smooth corners.	将半径设置为大于 0 的值以使用平滑圆角。
-Smooth Corners	平滑圆角
+Create a canvas or import a file.	创建画布或导入文件。
+How the line's ends, and each of its dashes and dots, are finished	线条端点及其各虚线和点的收尾方式
+Import a file or add a blank layer.	导入文件或添加空白图层。
+Import…	导入…
+Pen pressure sets the opacity: a light touch paints fainter, up to the brush’s Opacity	钢笔压力控制不透明度：轻触绘制更淡，最高可达画笔的不透明度
+Pen pressure sets the size: a light touch paints a thinner line	钢笔压力控制大小：轻触绘制更细的线条
+Pressure for opacity	压力控制不透明度
+Pressure for size	压力控制大小
+Solid, dashed or dotted; dashes grow with the line's width	实线、虚线或点线；虚线随线条宽度增大
