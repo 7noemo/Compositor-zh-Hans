@@ -1,11 +1,10 @@
 # 由 scripts/tools/translate_missing.py 自动生成，请勿手工编辑。
 # 人工修完请把满意的条目移进 translations/curated.tsv。
-Create a canvas or import a file.	创建画布或导入文件。
-How the line's ends, and each of its dashes and dots, are finished	线条端点及其各虚线和点的收尾方式
-Import a file or add a blank layer.	导入文件或添加空白图层。
-Import…	导入…
-Pen pressure sets the opacity: a light touch paints fainter, up to the brush’s Opacity	钢笔压力控制不透明度：轻触绘制更淡，最高可达画笔的不透明度
-Pen pressure sets the size: a light touch paints a thinner line	钢笔压力控制大小：轻触绘制更细的线条
-Pressure for opacity	压力控制不透明度
-Pressure for size	压力控制大小
-Solid, dashed or dotted; dashes grow with the line's width	实线、虚线或点线；虚线随线条宽度增大
+Click or drag on the canvas to move the center	在画布上单击或拖动以移动中心
+How far the colors spread apart, red one way and blue the other	颜色分离的距离，红色向一侧，蓝色向另一侧
+Linear splits along one direction; Radial splits outwards from a center, sharp there	线性沿一个方向分离；径向从中心向外分离，中心处锐利
+Smear the split into streaks along its direction	沿分离方向将其涂抹成条纹
+Split the layer's original channels into four grayscale layers, Red, Green, Blue and Alpha, for Export As › Channel Pack. Color under fully transparent pixels can't be recovered	将图层的原始通道拆分为四个灰度图层：红、绿、蓝和 Alpha，用于导出为 › 通道打包。完全透明像素下方的颜色无法恢复
+Split to Layers	拆分到图层
+What fills the %@ channel: a layer or group read as grayscale, or solid black or white	填充 %@ 通道的内容：作为灰度读取的图层或组，或纯黑或纯白
+Which way the colors spread	颜色分离的方向
