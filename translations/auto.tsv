@@ -1,10 +1,29 @@
 # 由 scripts/tools/translate_missing.py 自动生成，请勿手工编辑。
 # 人工修完请把满意的条目移进 translations/curated.tsv。
-Click or drag on the canvas to move the center	在画布上单击或拖动以移动中心
-How far the colors spread apart, red one way and blue the other	颜色分离的距离，红色向一侧，蓝色向另一侧
-Linear splits along one direction; Radial splits outwards from a center, sharp there	线性沿一个方向分离；径向从中心向外分离，中心处锐利
-Smear the split into streaks along its direction	沿分离方向将其涂抹成条纹
-Split the layer's original channels into four grayscale layers, Red, Green, Blue and Alpha, for Export As › Channel Pack. Color under fully transparent pixels can't be recovered	将图层的原始通道拆分为四个灰度图层：红、绿、蓝和 Alpha，用于导出为 › 通道打包。完全透明像素下方的颜色无法恢复
-Split to Layers	拆分到图层
-What fills the %@ channel: a layer or group read as grayscale, or solid black or white	填充 %@ 通道的内容：作为灰度读取的图层或组，或纯黑或纯白
-Which way the colors spread	颜色分离的方向
+Clear All	全部清除
+Close search	关闭搜索
+Close the search	关闭搜索
+Delete Frame	删除帧
+Duplicate Frame	复制帧
+Enabled masks apply here, as on the canvas. Drag or scroll to move around; double-click switches between Fit and 100%.	启用的蒙版在此处生效，与画布上一致。拖动或滚动以移动；双击可在适合屏幕与 100% 之间切换。
+Filter the layer list	筛选图层列表
+Forever	永久
+Frame %@	帧 %@
+Frame %lf	帧 %lf
+Frame %lld	帧 %lld
+Frames	帧
+GIF keeps fully transparent or opaque pixels; soft edges use a 50% threshold.	GIF 保留完全透明或不透明的像素；柔和边缘使用 50% 阈值。
+How long each frame shows	每帧显示时长
+Keep transparent areas	保留透明区域
+Other formats: TIFF, PDF and GIF%@	其他格式：TIFF、PDF 和 GIF%@
+Other formats: TIFF, PDF and GIF%lf	其他格式：TIFF、PDF 和 GIF%lf
+Other formats: TIFF, PDF and GIF%lld	其他格式：TIFF、PDF 和 GIF%lld
+Pause	暂停
+Pause animation preview	暂停动画预览
+Pause the animation preview.	暂停动画预览。
+Play animation preview	播放动画预览
+Play the animation preview.	播放动画预览。
+Search layers	搜索图层
+Search layers by name	按名称搜索图层
+Show only some kinds of layer	仅显示某些类型的图层
+Transparency	透明
