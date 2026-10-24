@@ -1,22 +1,10 @@
 # 由 scripts/tools/translate_missing.py 自动生成，请勿手工编辑。
 # 人工修完请把满意的条目移进 translations/curated.tsv。
-%@ · Original	%@ · 原始
-%lf · Original	%lf · 原始
-%lld · Original	%lld · 原始
-How bright a light has to be to flare	光线需要多亮才会产生光晕
-How bright a light has to be to sparkle	光线需要多亮才会产生闪烁
-How brightly lights open into discs	灯光形成光斑的亮度
-How far apart the copies are	副本之间的间距
-How far into the frame the copies show from that edge	副本从该边缘向画面内显示的距离
-How far out of focus: the size of each disc	失焦程度：每个光斑的大小
-How far the lens's coatings turn each streak blue along its length; none keeps the light's own color	镜头镀膜使每条光斑沿其长度变蓝的程度；无则保留光线本身的颜色
-How far the light spreads	光线扩散的程度
-How far the spikes reach	星芒延伸的距离
-How far the streaks reach across the picture	光斑在画面中延伸的距离
-How many spikes each light has, as the lens's aperture blades make them	每盏灯的星芒数量，由镜头光圈叶片形成
-How many times the picture echoes, each fainter	画面重影的次数，每次更淡
-How much light scatters: a soft halo around bright areas, and gently lifted shadows	光线散射的程度：亮部周围形成柔和光晕，阴影轻微提亮
-Light gathered at each disc's rim, as some lenses draw it	聚集在每个光斑边缘的光线，如某些镜头的成像效果
-Points	点
-The aperture's shape: round wide open, a hexagon of blades, an anamorphic oval, or a cat's eye toward the edges	光圈形状：全开时圆形、叶片六边形、变形宽银幕椭圆形，或边缘处的猫眼形
-Which way it's pushed, toward the edge the prism sits at	推动方向，朝向棱镜所在边缘
+Both Ways	双向
+Copies to one side of the picture, or out to both	将副本复制到图像一侧，或向两侧复制
+Direction	方向
+How bright a light has to be to flare; near 100, only the biggest, brightest spots	光线需要多亮才能产生光晕；接近 100 时，仅最大、最亮的光点会产生
+How bright a light has to be to sparkle; near 100, only the biggest, brightest spots	光线需要多亮才能产生闪烁；接近 100 时，仅最大、最亮的光点会产生
+One Way	单向
+Soften the copies, more the farther they're pushed	柔化副本，推得越远柔化程度越高
+Which way the copies step	副本的步进方向
