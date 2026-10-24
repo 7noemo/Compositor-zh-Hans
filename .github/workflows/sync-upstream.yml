@@ -38,7 +38,7 @@ name: Sync upstream translations
 on:
   schedule:
     # 每 6 小时一次。GitHub 的定时任务在高峰期可能延迟几分钟到十几分钟。
-    - cron: "23 */6 * * *"
+    - cron: "23 */3 * * *"
   workflow_dispatch:
     inputs:
       force:
