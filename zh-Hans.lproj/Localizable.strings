@@ -1450,3 +1450,12 @@
 "One Way" = "单向";
 "Soften the copies, more the farther they're pushed" = "柔化副本，推得越远柔化程度越高";
 "Which way the copies step" = "副本的步进方向";
+"%@ ms · %@ fps" = "%@ 毫秒 · %@ fps";
+"%@ ms · %lf fps" = "%@ 毫秒 · %lf fps";
+"%@ ms · %lld fps" = "%@ 毫秒 · %lld fps";
+"%lf ms · %@ fps" = "%lf 毫秒 · %@ fps";
+"%lf ms · %lf fps" = "%lf 毫秒 · %lf fps";
+"%lf ms · %lld fps" = "%lf 毫秒 · %lld fps";
+"%lld ms · %@ fps" = "%lld 毫秒 · %@ fps";
+"%lld ms · %lf fps" = "%lld 毫秒 · %lf fps";
+"%lld ms · %lld fps" = "%lld 毫秒 · %lld fps";

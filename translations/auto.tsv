@@ -1,10 +1,11 @@
 # 由 scripts/tools/translate_missing.py 自动生成，请勿手工编辑。
 # 人工修完请把满意的条目移进 translations/curated.tsv。
-Both Ways	双向
-Copies to one side of the picture, or out to both	将副本复制到图像一侧，或向两侧复制
-Direction	方向
-How bright a light has to be to flare; near 100, only the biggest, brightest spots	光线需要多亮才能产生光晕；接近 100 时，仅最大、最亮的光点会产生
-How bright a light has to be to sparkle; near 100, only the biggest, brightest spots	光线需要多亮才能产生闪烁；接近 100 时，仅最大、最亮的光点会产生
-One Way	单向
-Soften the copies, more the farther they're pushed	柔化副本，推得越远柔化程度越高
-Which way the copies step	副本的步进方向
+%@ ms · %@ fps	%@ 毫秒 · %@ fps
+%@ ms · %lf fps	%@ 毫秒 · %lf fps
+%@ ms · %lld fps	%@ 毫秒 · %lld fps
+%lf ms · %@ fps	%lf 毫秒 · %@ fps
+%lf ms · %lf fps	%lf 毫秒 · %lf fps
+%lf ms · %lld fps	%lf 毫秒 · %lld fps
+%lld ms · %@ fps	%lld 毫秒 · %@ fps
+%lld ms · %lf fps	%lld 毫秒 · %lf fps
+%lld ms · %lld fps	%lld 毫秒 · %lld fps
