@@ -151,8 +151,6 @@
 "Flip Canvas Vertical" = "垂直翻转画布";
 "Flip Layer Horizontal" = "水平翻转图层";
 "Flip Layer Vertical" = "垂直翻转图层";
-"Flip H" = "水平翻转";
-"Flip V" = "垂直翻转";
 "New Canvas" = "新建画布";
 "Couldn’t change canvas size" = "无法更改画布大小";
 "Couldn’t resize the image" = "无法调整图像大小";
@@ -1459,3 +1457,13 @@
 "%lld ms · %@ fps" = "%lld 毫秒 · %@ fps";
 "%lld ms · %lf fps" = "%lld 毫秒 · %lf fps";
 "%lld ms · %lld fps" = "%lld 毫秒 · %lld fps";
+"Align" = "对齐 ";
+"Custom ratio" = "自定义比例";
+"Custom…" = "自定…";
+"Distribute" = "分布";
+"Enter a positive ratio within the document size limits." = "请输入在文档大小限制内的正数比例。";
+"How fine the detail it sharpens: small for crisp texture, larger for a punchier look" = "锐化细节的精细程度：较小值呈现清晰纹理，较大值带来更强烈的效果";
+"How strongly edges and fine detail are brought out" = "边缘和精细细节的呈现强度";
+"Line layers up with each other, the selection, or the canvas when one is selected" = "选中时，将图层彼此、选区或画布对齐";
+"Width:Height" = "宽度:高度";
+"Width:height, such as 4:5 or 3:2" = "宽度:高度，例如 4:5 或 3:2";
