@@ -1467,3 +1467,4 @@
 "Line layers up with each other, the selection, or the canvas when one is selected" = "选中时，将图层彼此、选区或画布对齐";
 "Width:Height" = "宽度:高度";
 "Width:height, such as 4:5 or 3:2" = "宽度:高度，例如 4:5 或 3:2";
+"Split each copy's red and blue apart, as glass does; 0 keeps the copies crisp" = "像玻璃那样将每个副本的红色和蓝色分离；0 保持副本清晰";

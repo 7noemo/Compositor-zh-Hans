@@ -1,7 +1,7 @@
 {
   "_comment": "上一轮扫描到的 A 类文案原文（含 \"\\(x)\" 插值写法）。prune-obsolete.py 拿它对比出上游删掉/改名、因而在语言包里成了孤儿的 key。由 CI 自动维护，不要手工编辑。",
-  "tag": "v1.5.10",
-  "count": 610,
+  "tag": "v1.5.11",
+  "count": 611,
   "keys": [
     "",
     "#",
@@ -512,6 +512,7 @@
     "Snap To",
     "Soften the copies, more the farther they're pushed",
     "Solid, dashed or dotted; dashes grow with the line's width",
+    "Split each copy's red and blue apart, as glass does; 0 keeps the copies crisp",
     "Split the layer's original channels into four grayscale layers, Red, Green, Blue and Alpha, for Export As › Channel Pack. Color under fully transparent pixels can't be recovered",
     "Split to Layers",
     "Spot Healing",
