@@ -1,3 +1,14 @@
 # 由 scripts/tools/translate_missing.py 自动生成，请勿手工编辑。
 # 人工修完请把满意的条目移进 translations/curated.tsv。
-Split each copy's red and blue apart, as glass does; 0 keeps the copies crisp	像玻璃那样将每个副本的红色和蓝色分离；0 保持副本清晰
+Add Light	添加光照
+Choose this light's color	选择此光照的颜色
+Finding the subject…	正在查找主体…
+How far the light wraps around the subject's edges	光照环绕主体边缘的范围
+How the light ends on the inside: low feathers it off softly from the edge, high holds it bright and ends it crisply	光照在内侧的结束方式：较低值从边缘柔和羽化，较高值保持明亮并清晰结束
+Let the lights glow in the air around the subject, blending them into the background	让光照在主体周围的空气中发光，使其融入背景
+Light %@	光照 %@
+Light %lf	光照 %lf
+Light %lld	光照 %lld
+Light the subject from another side as well	同时从另一侧照亮主体
+Remove this light	移除此光照
+Where the light comes from, behind the subject: 0° from the right, 90° from above	光照来自主体后方的位置：0° 来自右侧，90° 来自上方
