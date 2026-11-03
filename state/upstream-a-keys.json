@@ -1,7 +1,7 @@
 {
   "_comment": "上一轮扫描到的 A 类文案原文（含 \"\\(x)\" 插值写法）。prune-obsolete.py 拿它对比出上游删掉/改名、因而在语言包里成了孤儿的 key。由 CI 自动维护，不要手工编辑。",
-  "tag": "v1.6.1",
-  "count": 639,
+  "tag": "v1.6.2",
+  "count": 643,
   "keys": [
     "",
     "#",
@@ -267,6 +267,9 @@
     "How long each frame shows",
     "How many spikes each light has, as the lens's aperture blades make them",
     "How many times the picture echoes, each fainter",
+    "How much colored speckle is smoothed into the colors around it",
+    "How much fine texture and edges are kept while the grain is smoothed",
+    "How much grain is smoothed from the picture's brightness",
     "How much light scatters: a soft halo around bright areas, and gently lifted shadows",
     "How much of each pixel's error spreads to its neighbors. Less gives flatter areas",
     "How much of the gap a bright line fills; dimmer parts draw it thinner",
@@ -375,6 +378,7 @@
     "New canvas (⌘N)",
     "New canvas (⌘N) · Drop images here for new tabs",
     "New color",
+    "New filter layer",
     "New folder",
     "New: \\(Int(draft.width.rounded())) × \\(Int(draft.height.rounded())) pixels · \\(bytes(Int(draft.width.rounded()), Int(draft.height.rounded()))) uncompressed",
     "No commands match",

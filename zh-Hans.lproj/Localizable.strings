@@ -1498,3 +1498,7 @@
 "Selection %lld × %lld px" = "选区 %lld × %lld px";
 "Show Extras" = "显示额外内容";
 "Spread out depths bunched together, such as a distant city, so the haze builds through them in steps; 0 keeps the depth as the model sees it" = "将聚集在一起的深度（例如远处的城市）分散开，使雾效逐步累积；0 则保持模型所见的深度";
+"How much colored speckle is smoothed into the colors around it" = "彩色杂点被平滑融入周围颜色的程度";
+"How much fine texture and edges are kept while the grain is smoothed" = "平滑颗粒时保留的细微纹理和边缘的程度";
+"How much grain is smoothed from the picture's brightness" = "从图像亮度中平滑颗粒的程度";
+"New filter layer" = "新建滤镜图层";
