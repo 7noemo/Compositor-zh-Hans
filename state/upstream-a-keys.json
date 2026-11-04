@@ -1,7 +1,7 @@
 {
   "_comment": "上一轮扫描到的 A 类文案原文（含 \"\\(x)\" 插值写法）。prune-obsolete.py 拿它对比出上游删掉/改名、因而在语言包里成了孤儿的 key。由 CI 自动维护，不要手工编辑。",
-  "tag": "v1.6.2",
-  "count": 643,
+  "tag": "v1.6.3",
+  "count": 644,
   "keys": [
     "",
     "#",
@@ -139,6 +139,7 @@
     "Diffusion is soft and wide, Bloom is tighter, and Halation is a red fringe.",
     "Dims the picture outside this color's range. It is not kept when you press OK.",
     "Direction",
+    "Distances",
     "Distribute",
     "Distribution",
     "Document Bounds",
