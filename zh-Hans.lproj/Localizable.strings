@@ -111,8 +111,6 @@
 "Deselect" = "取消选择";
 "Inverse" = "反向";
 "Reverse" = "反向";
-"Default colors" = "默认颜色";
-"Default colors (D)" = "默认颜色 (D)";
 "Swap colors" = "交换颜色";
 "Swap foreground and background (X)" = "交换前景色和背景色 (X)";
 "Lock original aspect ratio" = "锁定原始宽高比";
@@ -372,7 +370,6 @@
 "Select everything except those colors, such as all but a green screen" = "选取这些颜色之外的所有内容，例如去除绿幕";
 "Option temporarily selects the eyedropper in painting tools. Shift constrains shapes/movement or adds to a selection; Option subtracts from selections or draws from center. Command-drag moves selected pixels; Command-Option-drag copies them. Option-drag duplicates layers/folders/effects; Option-click at a layer boundary toggles clipping. Command-click a thumbnail loads its selection. Control bypasses snapping. Right-drag adjusts brush size. Modifier-and-mouse gestures are fixed." = "Option 在绘画工具中临时切换为吸管。Shift 约束形状或移动，也可加入选区；Option 从选区中减去或从中心绘制。Command 拖动可移动所选像素；Command-Option 拖动可复制像素。Option 拖动可复制图层/组/效果；在图层边界处 Option-点击可切换剪贴蒙版。Command-点击缩略图可载入其选区。Control 可绕过对齐。右键拖动可调整画笔大小。修饰键与鼠标手势为固定设置。";
 "Feather" = "羽化";
-"Fade the edge of the selection by this many pixels" = "按此像素值羽化选区边缘";
 "Select layers by clicking the canvas. Hold Command to turn it the other way while you click." = "在画布上点击以选择图层。按住 Command 点击可反向切换。";
 "Move / Transform (V)" = "移动 / 变换 (V)";
 "Several layers are selected. Select just one to paint on it." = "已选中多个图层。请仅选择一个图层进行绘制。";
@@ -1495,7 +1492,6 @@
 "How thick the air is: haze lit by the light, thinner in front of the subject" = "空气的浓稠度：雾效被光照亮，主体前方较稀薄";
 "Keep Subject Clear" = "保持主体清晰";
 "Keep the subject clear of the haze; off, it's hazed by its own distance, so a figure far off is misted" = "使主体不受雾效影响；关闭时，主体会因自身距离而被雾化，因此远处的人物会显得朦胧";
-"Selection %lld × %lld px" = "选区 %lld × %lld px";
 "Show Extras" = "显示额外内容";
 "Spread out depths bunched together, such as a distant city, so the haze builds through them in steps; 0 keeps the depth as the model sees it" = "将聚集在一起的深度（例如远处的城市）分散开，使雾效逐步累积；0 则保持模型所见的深度";
 "How much colored speckle is smoothed into the colors around it" = "彩色杂点被平滑融入周围颜色的程度";
@@ -1503,3 +1499,5 @@
 "How much grain is smoothed from the picture's brightness" = "从图像亮度中平滑颗粒的程度";
 "New filter layer" = "新建滤镜图层";
 "Distances" = "距离";
+"How many pixels to expand, contract or feather the selection by" = "扩展、收缩或羽化选区的像素数";
+"Reset colors to black and white (D)" = "将颜色重置为黑色和白色 (D)";

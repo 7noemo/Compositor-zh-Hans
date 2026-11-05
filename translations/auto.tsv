@@ -1,3 +1,4 @@
 # 由 scripts/tools/translate_missing.py 自动生成，请勿手工编辑。
 # 人工修完请把满意的条目移进 translations/curated.tsv。
-Distances	距离
+How many pixels to expand, contract or feather the selection by	扩展、收缩或羽化选区的像素数
+Reset colors to black and white (D)	将颜色重置为黑色和白色 (D)
