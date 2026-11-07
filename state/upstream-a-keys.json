@@ -1,7 +1,7 @@
 {
   "_comment": "上一轮扫描到的 A 类文案原文（含 \"\\(x)\" 插值写法）。prune-obsolete.py 拿它对比出上游删掉/改名、因而在语言包里成了孤儿的 key。由 CI 自动维护，不要手工编辑。",
-  "tag": "v1.6.4",
-  "count": 642,
+  "tag": "v1.6.5",
+  "count": 644,
   "keys": [
     "",
     "#",
@@ -115,6 +115,7 @@
     "Create canvas",
     "Crop",
     "Crops empty edges after the transform and fits the result back into the frame.",
+    "Current color",
     "Current: \\(document.width) × \\(document.height) pixels",
     "Current: \\(draft.originalWidth) × \\(draft.originalHeight) pixels",
     "Curve",
@@ -566,6 +567,7 @@
     "The blur where the line starts",
     "The brush trails the pointer on a string this long, so a shaky hand still draws a smooth line",
     "The characters to draw with, in any order: each spot gets the one whose ink best matches its tone",
+    "The color before: click to go back to it",
     "The height of each line of characters",
     "This Layer",
     "This file has no lens profile",
