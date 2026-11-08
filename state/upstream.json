@@ -2,26 +2,35 @@
   "_comment": "由 .github/workflows/sync-upstream.yml 自动维护。手工编辑也没问题，下一轮同步会覆盖这几个统计字段。",
   "upstream": {
     "repo": "robbietilton/Compositor",
-    "latest_tag": "v1.6.5",
-    "latest_version": "1.6.5",
-    "published_at": "2026-11-07T17:41:32Z"
+    "latest_tag": "v1.6.6",
+    "latest_version": "1.6.6",
+    "published_at": "2026-11-08T01:27:10Z"
   },
   "localized": {
     "repo": "7noemo/Compositor-zh-Hans",
-    "strings_total": 1410,
-    "translatable_strings": 644,
-    "translatable_covered": 633,
+    "strings_total": 1412,
+    "translatable_strings": 643,
+    "translatable_covered": 632,
     "coverage_percent": 98.3,
     "untranslatable_sites": 214,
     "untranslatable_expressions": 94,
-    "scan_found": 1485,
-    "scan_covered": 1218,
-    "scan_todo": 267,
-    "scan_coverage_percent": 82.0,
-    "last_sync": "2026-11-07",
-    "last_release": "lang-v1.6.5"
+    "scan_found": 1483,
+    "scan_covered": 1219,
+    "scan_todo": 264,
+    "scan_coverage_percent": 82.2,
+    "last_sync": "2026-11-08",
+    "last_release": "lang-v1.6.6"
   },
   "history": [
+    {
+      "tag": "v1.6.6",
+      "version": "1.6.6",
+      "synced_at": "2026-11-08",
+      "strings_total": 1412,
+      "coverage_percent": 98.3,
+      "release_tag": "lang-v1.6.6",
+      "note": "上游发新版，自动同步"
+    },
     {
       "tag": "v1.6.5",
       "version": "1.6.5",
