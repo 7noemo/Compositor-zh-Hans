@@ -599,7 +599,6 @@
 
 /* ===== 界面 / 外观 ===== */
 "Hex color" = "十六进制颜色";
-"Foreground color" = "前景色";
 "sRGB · Transparent" = "sRGB · 透明";
 "Drag to resize the panel" = "拖动以调整面板大小";
 "#" = "#";
@@ -1502,3 +1501,4 @@
 "Reset colors to black and white (D)" = "将颜色重置为黑色和白色 (D)";
 "Current color" = "当前颜色";
 "The color before: click to go back to it" = "之前的颜色：单击可返回该颜色";
+"Smooth edges; turn off for hard pixel edges, like a pencil" = "平滑边缘；关闭后可获得硬像素边缘，类似铅笔效果";
