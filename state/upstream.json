@@ -2,9 +2,9 @@
   "_comment": "由 .github/workflows/sync-upstream.yml 自动维护。手工编辑也没问题，下一轮同步会覆盖这几个统计字段。",
   "upstream": {
     "repo": "robbietilton/Compositor",
-    "latest_tag": "v1.6.9",
-    "latest_version": "1.6.9",
-    "published_at": "2026-11-16T17:09:25Z"
+    "latest_tag": "v1.6.10",
+    "latest_version": "1.6.10",
+    "published_at": "2026-11-17T03:17:01Z"
   },
   "localized": {
     "repo": "7noemo/Compositor-zh-Hans",
@@ -18,10 +18,19 @@
     "scan_covered": 1219,
     "scan_todo": 266,
     "scan_coverage_percent": 82.1,
-    "last_sync": "2026-11-16",
-    "last_release": "lang-v1.6.9"
+    "last_sync": "2026-11-17",
+    "last_release": "lang-v1.6.10"
   },
   "history": [
+    {
+      "tag": "v1.6.10",
+      "version": "1.6.10",
+      "synced_at": "2026-11-17",
+      "strings_total": 1411,
+      "coverage_percent": 98.3,
+      "release_tag": "lang-v1.6.10",
+      "note": "上游发新版，自动同步"
+    },
     {
       "tag": "v1.6.9",
       "version": "1.6.9",
