@@ -1,10 +1,3 @@
 # 由 scripts/tools/translate_missing.py 自动生成，请勿手工编辑。
 # 人工修完请把满意的条目移进 translations/curated.tsv。
-Color of the next line	下一行的颜色
-Color of the selected line	所选线条的颜色
-Dashes of the selected line; they grow with its width	所选线条的虚线；随其宽度增长
-Fill color of the selected shape	所选形状的填充颜色
-How this line's ends are finished	此线条端点的样式
-Round this rectangle's corners by this many pixels; 0 keeps them square	按此像素值圆角化此矩形；0 保持直角
-Stroke color	描边颜色
-Stroke drawn inside the shape, in pixels. 0 draws none	在形状内部绘制描边，单位为像素。0 表示不绘制
+Changes	更改
