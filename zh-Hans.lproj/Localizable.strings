@@ -1511,3 +1511,8 @@
 "Stroke color" = "描边颜色";
 "Stroke drawn inside the shape, in pixels. 0 draws none" = "在形状内部绘制描边，单位为像素。0 表示不绘制";
 "Changes" = "更改";
+"Grab Frame" = "抓取帧";
+"Movie playhead" = "影片播放头";
+"Mute movie" = "静音影片";
+"Relink…" = "重新链接…";
+"Unmute movie" = "取消静音影片";
