@@ -1,2 +1,27 @@
 # 由 scripts/tools/translate_missing.py 自动生成，请勿手工编辑。
 # 人工修完请把满意的条目移进 translations/curated.tsv。
+Add Compositor to your AI app	将 Compositor 添加到你的 AI 应用
+Allow MCP control	允许 MCP 控制
+Appearance	外观
+Check for updates automatically	自动检查更新
+Connect	连接
+Connected	已连接
+Copied	已拷贝
+Copy Setup	拷贝设置
+Disconnect	断开连接
+Frame %@ of %lld	第 %@ 帧，共 %lld 帧
+Frame %lf of %lld	第 %lf 帧，共 %lld 帧
+Frame %lld of %lld	第 %lld 帧，共 %lld 帧
+Frame delay	帧延迟
+GIF frame	GIF 帧
+General	通用
+Open Again	再次打开
+Read what changed in each version on GitHub.	在 GitHub 上查看每个版本的更改内容。
+Release Notes	发行说明
+Reset all	全部重置
+Revert Changes	恢复更改
+Software Update	软件更新
+Text fields keep standard macOS editing keys. Dialogs share the Apply/Cancel assignments above. Numeric fields use Up/Down, with Shift for larger steps. Standard macOS commands include ⌘Q to quit and ⌃⌘F for full screen.	文本栏保留标准 macOS 编辑按键。对话框共用上方的应用/取消分配。数值栏使用上/下方向键，按住 Shift 可加大步进。标准 macOS 命令包括 ⌘Q 退出和 ⌃⌘F 全屏。
+Turn on Allow MCP control to connect AI apps.	打开允许 MCP 控制以连接 AI 应用。
+Updates	更新
+View GitHub Releases	查看 GitHub 发行版
